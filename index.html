@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mokara Gymnastics — Daily Schedule</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: #0d1b2a;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  #page {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  #stage {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0d1b2a;
+  }
+  #scheduleImg {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
+  }
+  #clockBar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #16233b;
+    color: #ffffff;
+    padding: 0 clamp(16px, 2.5vw, 40px);
+    height: clamp(56px, 8vh, 100px);
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.25);
+  }
+  #clockDate {
+    font-size: clamp(14px, 1.7vw, 26px);
+    font-weight: 500;
+    opacity: 0.9;
+  }
+  #clockTime {
+    font-size: clamp(22px, 3.4vw, 52px);
+    font-weight: 700;
+    letter-spacing: 1px;
+    font-variant-numeric: tabular-nums;
+  }
+  #errorMsg {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 2vw;
+    text-align: center;
+    padding: 40px;
+    box-sizing: border-box;
+  }
+</style>
+</head>
+<body>
+
+<div id="page">
+  <div id="stage">
+    <img id="scheduleImg" src="" alt="Mokara Gymnastics schedule">
+  </div>
+  <div id="clockBar">
+    <div id="clockDate">-</div>
+    <div id="clockTime">--:--:--</div>
+  </div>
+</div>
+
+<div id="errorMsg"></div>
+
+<script>
+/* =========================================================================
+   MOKARA GYMNASTICS — AUTO SCHEDULE DISPLAY
+   =========================================================================
+   HOW THE MONTHLY UPDATE WORKS
+   -----------------------------
+   1. Export the new month's PDF pages as images (same 27-page layout:
+      Monday, Tuesday, Wednesday, Thursday, Friday, Saturday AM, Saturday PM,
+      Sunday AM, Sunday PM — repeated for each of the 3 rotation patterns).
+   2. Name each image exactly like the existing files in /schedules, e.g.
+      weekA-mon.png, weekA-tue.png ... weekC-sun-pm.png, and overwrite the
+      old ones (same file names = the page updates automatically, no code
+      changes needed).
+   3. Update WEEK1_START_DATE below to the Monday that starts "Week 1" for
+      the new month's roster.
+   4. Bump CACHE_BUST_VERSION by 1 so screens don't keep showing cached
+      copies of last month's images.
+   That's it — nothing else on this page needs to change.
+   ========================================================================= */
+
+  // The Monday that "Week 1" begins on on the current roster (YYYY-MM-DD).
+  var WEEK1_START_DATE = "2026-08-03";
+
+  // Bump this by 1 every time you replace the schedule images, so screens
+  // don't display stale cached copies.
+  var CACHE_BUST_VERSION = 1;
+
+  // Which rotation pattern (A, B or C) each programme week number uses.
+  // Taken directly from the coaches' PDF: "Weeks 1 & 4" = A, "Week 2" = B,
+  // "Weeks 3 & 5" = C. If a 6th week is ever needed before the next
+  // monthly update, the pattern wraps back to week 1.
+  var WEEK_VARIANT = { 1: "A", 2: "B", 3: "C", 4: "A", 5: "C" };
+
+  // Time of day that Saturday/Sunday switches from the AM sheet to the PM
+  // sheet (24h "HH:MM"), taken from the PDF (Sat/Sun PM sessions start 1:30pm).
+  var WEEKEND_PM_CUTOFF = "13:30";
+
+  // Timezone the gym operates in — locked so the display is correct
+  // regardless of what timezone the screen's own OS is set to.
+  var TIMEZONE = "Asia/Singapore";
+
+  var DAY_KEYS = { 1: "mon", 2: "tue", 3: "wed", 4: "thu", 5: "fri", 6: "sat", 0: "sun" };
+
+  function getPartsInTZ(date) {
+    var fmt = new Intl.DateTimeFormat("en-CA", {
+      timeZone: TIMEZONE,
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit",
+      hour12: false, weekday: "short"
+    });
+    var parts = {};
+    fmt.formatToParts(date).forEach(function (p) { parts[p.type] = p.value; });
+    return parts;
+  }
+
+  function dateOnlyUTC(y, m, d) {
+    return Date.UTC(y, m - 1, d);
+  }
+
+  function computeSchedule(now) {
+    var parts = getPartsInTZ(now);
+    var y = parseInt(parts.year, 10), m = parseInt(parts.month, 10), d = parseInt(parts.day, 10);
+    var hh = parts.hour, mm = parts.minute;
+
+    var weekdayMap = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 0 };
+    var dow = weekdayMap[parts.weekday];
+
+    var startBits = WEEK1_START_DATE.split("-").map(Number);
+    var startUTC = dateOnlyUTC(startBits[0], startBits[1], startBits[2]);
+    var todayUTC = dateOnlyUTC(y, m, d);
+
+    var daysSinceStart = Math.round((todayUTC - startUTC) / 86400000);
+    var weekIndex0 = Math.floor(daysSinceStart / 7);
+    var cyclePos = ((weekIndex0 % 5) + 5) % 5; // 0..4
+    var weekNumber = cyclePos + 1;             // 1..5
+    var variant = WEEK_VARIANT[weekNumber] || "A";
+
+    var dayKey = DAY_KEYS[dow];
+    var isWeekend = (dow === 0 || dow === 6);
+    var slug = dayKey;
+
+    if (isWeekend) {
+      var nowMinutes = parseInt(hh, 10) * 60 + parseInt(mm, 10);
+      var cutoffBits = WEEKEND_PM_CUTOFF.split(":").map(Number);
+      var cutoffMinutes = cutoffBits[0] * 60 + cutoffBits[1];
+      slug = dayKey + (nowMinutes < cutoffMinutes ? "-am" : "-pm");
+    }
+
+    return {
+      file: "schedules/week" + variant + "-" + slug + ".png?v=" + CACHE_BUST_VERSION,
+      weekNumber: weekNumber,
+      variant: variant,
+      dayLabel: parts.weekday,
+      dateLabel: y + "-" + parts.month + "-" + parts.day,
+      timeLabel: hh + ":" + mm + ":" + parts.second
+    };
+  }
+
+  var currentSrc = "";
+  function refreshSchedule() {
+    var info = computeSchedule(new Date());
+    if (info.file !== currentSrc) {
+      var img = document.getElementById("scheduleImg");
+      var testImg = new Image();
+      testImg.onload = function () {
+        img.src = info.file;
+        document.getElementById("errorMsg").style.display = "none";
+        img.style.display = "block";
+      };
+      testImg.onerror = function () {
+        document.getElementById("errorMsg").innerHTML =
+          "Schedule image not found:<br><code>" + info.file + "</code>";
+        document.getElementById("errorMsg").style.display = "flex";
+        img.style.display = "none";
+      };
+      testImg.src = info.file;
+      currentSrc = info.file;
+    }
+  }
+
+  function tickClock() {
+    var parts = getPartsInTZ(new Date());
+    document.getElementById("clockTime").textContent =
+      parts.hour + ":" + parts.minute + ":" + parts.second;
+
+    var weekdayFull = new Intl.DateTimeFormat("en-GB", {
+      timeZone: TIMEZONE, weekday: "long", day: "numeric", month: "long"
+    }).format(new Date());
+    document.getElementById("clockDate").textContent = weekdayFull;
+  }
+
+  refreshSchedule();
+  tickClock();
+  setInterval(tickClock, 1000);
+  setInterval(refreshSchedule, 15000);
+
+  // Full reload once a day just after midnight SGT, as a safety net so the
+  // page never silently drifts (also clears any memory build-up from
+  // running unattended for weeks at a time).
+  (function scheduleMidnightReload() {
+    var parts = getPartsInTZ(new Date());
+    var msNow = parseInt(parts.hour) * 3600000 + parseInt(parts.minute) * 60000 + parseInt(parts.second) * 1000;
+    var msUntilMidnight = 86400000 - msNow + 5000;
+    setTimeout(function () { location.reload(); }, msUntilMidnight);
+  })();
+</script>
+
+</body>
+</html>
