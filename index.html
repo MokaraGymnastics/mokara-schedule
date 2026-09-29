@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mokara Gymnastics — Daily Schedule</title>
+<title>Mokara Gymnastics — Live Schedule</title>
 <style>
   html, body {
     margin: 0;
@@ -13,198 +13,328 @@
     background: #0d1b2a;
     overflow: hidden;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #fff;
   }
   #page {
     position: fixed;
     inset: 0;
     display: flex;
+    flex-direction: column;
     background: #0d1b2a;
   }
-
-  /* ---- Default / fallback layout: image on top, clock bar underneath.
-     Used automatically on screens where the schedule's own aspect ratio
-     is already close to the screen's (little/no side space to speak of),
-     e.g. portrait or squarer 4:3-ish screens. JS decides which layout
-     applies at runtime, based on the actual screen. ---- */
-  #page.layout-bottom {
-    flex-direction: column;
-  }
-  #page.layout-bottom #stage {
-    flex: 1 1 auto;
-    min-height: 0;
+  #topBar {
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
-    justify-content: center;
-  }
-  #page.layout-bottom #scheduleImg {
-    max-width: 100%;
-    max-height: 100%;
-    width: auto;
-    height: auto;
-  }
-  #page.layout-bottom #clockBar {
-    flex: 0 0 auto;
-    flex-direction: row;
     justify-content: space-between;
-    padding: 0 clamp(14px, 2vw, 32px);
-    height: clamp(38px, 4.5vh, 60px);
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.25);
+    padding: clamp(10px, 1.6vh, 22px) clamp(16px, 2vw, 36px);
+    background: #16233b;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.25);
   }
-  #page.layout-bottom #clockDate { font-size: clamp(12px, 1.4vw, 20px); }
-  #page.layout-bottom #clockTime { font-size: clamp(18px, 2.6vw, 36px); }
-  #page.layout-bottom #brandGutter { display: none; }
+  #brand {
+    font-weight: 700;
+    letter-spacing: 2px;
+    font-size: clamp(14px, 2vh, 24px);
+    opacity: 0.9;
+  }
+  #brand .cat {
+    font-weight: 500;
+    opacity: 0.7;
+    margin-left: 10px;
+    font-size: 0.7em;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+  }
+  #dayInfo {
+    text-align: right;
+  }
+  #dayInfo .day {
+    font-size: clamp(18px, 2.6vh, 32px);
+    font-weight: 700;
+  }
+  #dayInfo .sub {
+    font-size: clamp(11px, 1.3vh, 16px);
+    opacity: 0.75;
+  }
 
-  /* ---- Widescreen layout: the schedule is genuinely taller (relative to
-     its width) than the screen, so filling the screen height leaves empty
-     columns left/right. Instead of wasting those as black bars, the clock
-     lives in the right-hand column and a matching panel balances the left,
-     so the schedule itself renders as large as the screen height allows. ---- */
-  #page.layout-side {
-    flex-direction: row;
-    align-items: stretch;
+  #body {
+    flex: 1 1 auto;
+    display: flex;
+    min-height: 0;
   }
-  #page.layout-side #brandGutter {
+
+  #gridArea {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    padding: clamp(8px, 1.4vh, 20px) clamp(12px, 1.6vw, 28px);
+    overflow: hidden;
+  }
+
+  #ruler {
+    display: flex;
+    flex: 0 0 auto;
+    height: clamp(20px, 2.6vh, 34px);
+    margin-left: var(--label-width, 150px);
+    position: relative;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+    margin-bottom: 4px;
+  }
+  .rulerTick {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    align-items: flex-end;
+    font-size: clamp(9px, 1.1vh, 13px);
+    color: rgba(255,255,255,0.55);
+    border-left: 1px solid rgba(255,255,255,0.12);
+    padding-left: 4px;
+  }
+  .rulerTick.major {
+    color: rgba(255,255,255,0.85);
+    font-weight: 600;
+    border-left-color: rgba(255,255,255,0.3);
+  }
+
+  #rows {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(4px, 0.8vh, 10px);
+    overflow-y: auto;
+    min-height: 0;
+  }
+  .squadRow {
     flex: 1 1 0;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #16233b;
+    align-items: stretch;
+    min-height: 0;
   }
-  #page.layout-side #brandGutter .brandMark {
-    color: #ffffff;
-    opacity: 0.5;
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
-    font-size: clamp(16px, 2.6vh, 30px);
-    font-weight: 600;
-    letter-spacing: 6px;
+  .squadLabel {
+    flex: 0 0 var(--label-width, 150px);
+    width: var(--label-width, 150px);
+    display: flex;
+    align-items: center;
+    font-weight: 700;
+    font-size: clamp(11px, 1.5vh, 17px);
+    padding-right: 10px;
+    color: #cfe0ee;
+  }
+  .squadTrack {
+    position: relative;
+    flex: 1 1 auto;
+    background: rgba(255,255,255,0.04);
+    border-radius: 6px;
+  }
+  .block {
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    border-radius: 5px;
+    box-sizing: border-box;
+    padding: 3px 6px;
+    overflow: hidden;
+    font-size: clamp(9px, 1.25vh, 14px);
+    line-height: 1.25;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.35);
+  }
+  .block .code {
+    font-weight: 800;
+    display: block;
+  }
+  .block .time {
+    display: block;
+    opacity: 0.85;
+    font-size: 0.85em;
     white-space: nowrap;
   }
-  #page.layout-side #stage {
+
+  #emptyMsg, #errorMsg {
+    margin: auto;
+    text-align: center;
+    opacity: 0.75;
+    font-size: clamp(14px, 2vh, 22px);
+    padding: 20px;
+  }
+
+  #sidebar {
+    flex: 0 0 clamp(150px, 16vw, 260px);
+    background: #16233b;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(10px, 1.8vh, 22px);
+    padding: 10px;
+    text-align: center;
+    border-left: 1px solid rgba(255,255,255,0.08);
+  }
+  #clockDate {
+    font-size: clamp(13px, 1.9vh, 24px);
+    font-weight: 500;
+    opacity: 0.9;
+  }
+  #clockTime {
+    font-size: clamp(24px, 4vh, 52px);
+    font-weight: 700;
+    letter-spacing: 1px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  #legend {
     flex: 0 0 auto;
     display: flex;
+    flex-wrap: wrap;
+    gap: clamp(8px, 1.2vw, 20px);
     align-items: center;
-    justify-content: center;
+    padding: clamp(6px, 1vh, 14px) clamp(16px, 2vw, 36px);
+    background: #101d30;
+    font-size: clamp(9px, 1.15vh, 13px);
   }
-  #page.layout-side #scheduleImg {
-    height: 100vh;
-    width: auto;
-    max-width: none;
-    max-height: none;
-  }
-  #page.layout-side #clockBar {
-    flex: 1 1 0;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: clamp(8px, 1.6vh, 20px);
-    background: #16233b;
-    padding: 0 clamp(10px, 1.4vw, 28px);
-    text-align: center;
-  }
-  #page.layout-side #clockDate {
-    font-size: clamp(14px, 2.1vh, 30px);
-  }
-  #page.layout-side #clockTime {
-    font-size: clamp(22px, 3.6vh, 54px);
-  }
-
-  #scheduleImg { display: block; }
-  #clockBar {
+  .legendItem {
     display: flex;
-    color: #ffffff;
-  }
-  #clockDate { font-weight: 500; opacity: 0.9; }
-  #clockTime { font-weight: 700; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
-
-  #errorMsg {
-    position: fixed;
-    inset: 0;
-    display: none;
     align-items: center;
-    justify-content: center;
-    color: #ffffff;
-    font-size: 2vw;
-    text-align: center;
-    padding: 40px;
-    box-sizing: border-box;
+    gap: 6px;
+    opacity: 0.9;
+  }
+  .legendSwatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    flex: 0 0 auto;
   }
 </style>
 </head>
 <body>
 
-<div id="page" class="layout-bottom">
-  <div id="brandGutter"><div class="brandMark">MOKARA GYMNASTICS</div></div>
-  <div id="stage">
-    <img id="scheduleImg" src="" alt="Mokara Gymnastics schedule">
+<div id="page">
+  <div id="topBar">
+    <div id="brand">MOKARA GYMNASTICS<span class="cat" id="catLabel"></span></div>
+    <div id="dayInfo">
+      <div class="day" id="dayLabel">-</div>
+      <div class="sub" id="weekLabel">-</div>
+    </div>
   </div>
-  <div id="clockBar">
-    <div id="clockDate">-</div>
-    <div id="clockTime">--:--:--</div>
-  </div>
-</div>
 
-<div id="errorMsg"></div>
+  <div id="body">
+    <div id="gridArea">
+      <div id="ruler"></div>
+      <div id="rows"></div>
+    </div>
+    <div id="sidebar">
+      <div id="clockDate">-</div>
+      <div id="clockTime">--:--:--</div>
+    </div>
+  </div>
+
+  <div id="legend"></div>
+</div>
 
 <script>
 /* =========================================================================
-   MOKARA GYMNASTICS — AUTO SCHEDULE DISPLAY
+   MOKARA GYMNASTICS — LIVE SCHEDULE DISPLAY (Google Sheet powered)
    =========================================================================
-   HOW THE MONTHLY UPDATE WORKS
-   -----------------------------
-   1. Export the new month's PDF pages as images (same 27-page layout:
-      Monday, Tuesday, Wednesday, Thursday, Friday, Saturday AM, Saturday PM,
-      Sunday AM, Sunday PM — repeated for each of the 3 rotation patterns).
-   2. Name each image exactly like the existing files in /schedules, e.g.
-      weekA-mon.png, weekA-tue.png ... weekC-sun-pm.png, and overwrite the
-      old ones (same file names = the page updates automatically, no code
-      changes needed).
-   3. Update WEEK1_START_DATE below to the Monday that starts "Week 1" for
-      the new month's roster.
-   4. Bump CACHE_BUST_VERSION by 1 so screens don't keep showing cached
-      copies of last month's images.
-   That's it — nothing else on this page needs to change.
+   All schedule content lives in a Google Sheet, not in this file. Nobody
+   should ever need to edit this file to change the schedule — see the
+   "Read Me" tab in the spreadsheet for how staff update things.
+
+   This page is loaded with a URL parameter telling it which category to
+   show, e.g.:
+     index.html?cat=rec
+     index.html?cat=comp
+   Point one TV's KitCast Website app at each URL.
    ========================================================================= */
 
-  // The Monday that "Week 1" begins on on the current roster (YYYY-MM-DD).
-  var WEEK1_START_DATE = "2026-08-10";
-
-  // Bump this by 1 every time you replace the schedule images, so screens
-  // don't display stale cached copies.
-  var CACHE_BUST_VERSION = 3;
-
-  // Which rotation pattern (A, B or C) each programme week number uses.
-  // Taken directly from the coaches' PDF: "Weeks 1 & 4" = A, "Week 2" = B,
-  // "Weeks 3 & 5" = C. If a 6th week is ever needed before the next
-  // monthly update, the pattern wraps back to week 1.
-  var WEEK_VARIANT = { 1: "A", 2: "B", 3: "C", 4: "A", 5: "C" };
-
-  // Time of day that Saturday/Sunday switches from the AM sheet to the PM
-  // sheet (24h "HH:MM"), taken from the PDF (Sat/Sun PM sessions start 1:30pm).
-  var WEEKEND_PM_CUTOFF = "13:30";
-
-  // Timezone the gym operates in — locked so the display is correct
-  // regardless of what timezone the screen's own OS is set to.
+  var SHEET_ID = "1y-e7Eqj6mPWsLAft51TSF55rBmcxxUMzjIZOelz7d3E";
   var TIMEZONE = "Asia/Singapore";
+  var REFRESH_MS = 120000; // re-check the spreadsheet every 2 minutes (well under the 10-min requirement)
+  var MAX_WEEKS_TO_TRY = 8; // safety cap; actual rotation length comes from the Settings tab
 
-  var DAY_KEYS = { 1: "mon", 2: "tue", 3: "wed", 4: "thu", 5: "fri", 6: "sat", 0: "sun" };
+  var DAY_ORDER = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-  // Actual pixel dimensions of the exported schedule images (all 27 share
-  // this exact size). Used only to decide which screen layout to use below.
-  var IMAGE_ASPECT = 2375 / 1666;
+  function getCategory() {
+    var params = new URLSearchParams(window.location.search);
+    var cat = (params.get("cat") || "").trim().toLowerCase();
+    if (cat === "rec") return "Rec";
+    if (cat === "comp") return "Comp";
+    return null;
+  }
 
-  // If the screen is wide enough that fitting the schedule to full height
-  // would leave more than this many spare screen-widths on the sides
-  // combined, use the side-panel layout (clock in the gutter) instead of
-  // wasting that space as plain black bars.
-  function chooseLayout() {
-    var viewportAspect = window.innerWidth / window.innerHeight;
-    var page = document.getElementById("page");
-    if (viewportAspect > IMAGE_ASPECT * 1.08) {
-      page.className = "layout-side";
-    } else {
-      page.className = "layout-bottom";
+  function sheetCsvUrl(sheetName) {
+    return "https://docs.google.com/spreadsheets/d/" + SHEET_ID +
+      "/gviz/tq?tqx=out:csv&sheet=" + encodeURIComponent(sheetName) +
+      "&_=" + Date.now(); // cache-bust every fetch
+  }
+
+  // Minimal CSV parser: handles quoted fields, embedded commas, and "" escapes.
+  function parseCSV(text) {
+    var rows = [];
+    var row = [];
+    var field = "";
+    var inQuotes = false;
+    for (var i = 0; i < text.length; i++) {
+      var c = text[i];
+      if (inQuotes) {
+        if (c === '"') {
+          if (text[i + 1] === '"') { field += '"'; i++; }
+          else { inQuotes = false; }
+        } else {
+          field += c;
+        }
+      } else {
+        if (c === '"') inQuotes = true;
+        else if (c === ',') { row.push(field); field = ""; }
+        else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ""; }
+        else if (c === '\r') { /* skip */ }
+        else field += c;
+      }
     }
+    if (field.length || row.length) { row.push(field); rows.push(row); }
+    return rows.filter(function (r) { return r.some(function (c) { return c.trim() !== ""; }); });
+  }
+
+  function normalizeHeader(h) {
+    return h.trim().toLowerCase().replace(/[^a-z]/g, "");
+  }
+
+  function rowsToObjects(rows) {
+    if (!rows.length) return [];
+    var headers = rows[0].map(normalizeHeader);
+    return rows.slice(1).map(function (r) {
+      var obj = {};
+      headers.forEach(function (h, idx) { obj[h] = (r[idx] || "").trim(); });
+      return obj;
+    });
+  }
+
+  function fetchSheet(sheetName) {
+    return fetch(sheetCsvUrl(sheetName)).then(function (res) {
+      if (!res.ok) throw new Error("Could not load sheet: " + sheetName);
+      return res.text();
+    }).then(parseCSV);
+  }
+
+  // Parses times like "4:00 PM", "4:00PM", "16:00", "16:00:00" -> minutes since midnight
+  function parseTimeToMinutes(str) {
+    if (!str) return null;
+    str = str.trim();
+    var m = str.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([AaPp][Mm])?$/);
+    if (!m) return null;
+    var h = parseInt(m[1], 10);
+    var min = parseInt(m[2], 10);
+    var ampm = m[4] ? m[4].toUpperCase() : null;
+    if (ampm === "PM" && h !== 12) h += 12;
+    if (ampm === "AM" && h === 12) h = 0;
+    return h * 60 + min;
+  }
+
+  function formatMinutes(mins) {
+    var h = Math.floor(mins / 60), m = mins % 60;
+    var ampm = h >= 12 ? "PM" : "AM";
+    var h12 = h % 12; if (h12 === 0) h12 = 12;
+    return h12 + (m ? ":" + (m < 10 ? "0" : "") + m : "") + ampm;
   }
 
   function getPartsInTZ(date) {
@@ -219,92 +349,203 @@
     return parts;
   }
 
-  function dateOnlyUTC(y, m, d) {
-    return Date.UTC(y, m - 1, d);
-  }
+  function dateOnlyUTC(y, m, d) { return Date.UTC(y, m - 1, d); }
 
-  function computeSchedule(now) {
+  var WEEKDAY_MAP = { Mon: "Mon", Tue: "Tue", Wed: "Wed", Thu: "Thu", Fri: "Fri", Sat: "Sat", Sun: "Sun" };
+
+  function computeCurrentWeekAndDay(now, anchorDateStr, rotationLength) {
     var parts = getPartsInTZ(now);
     var y = parseInt(parts.year, 10), m = parseInt(parts.month, 10), d = parseInt(parts.day, 10);
-    var hh = parts.hour, mm = parts.minute;
-
-    var weekdayMap = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 0 };
-    var dow = weekdayMap[parts.weekday];
-
-    var startBits = WEEK1_START_DATE.split("-").map(Number);
+    var startBits = anchorDateStr.split("-").map(Number);
     var startUTC = dateOnlyUTC(startBits[0], startBits[1], startBits[2]);
     var todayUTC = dateOnlyUTC(y, m, d);
-
     var daysSinceStart = Math.round((todayUTC - startUTC) / 86400000);
     var weekIndex0 = Math.floor(daysSinceStart / 7);
-    var cyclePos = ((weekIndex0 % 5) + 5) % 5; // 0..4
-    var weekNumber = cyclePos + 1;             // 1..5
-    var variant = WEEK_VARIANT[weekNumber] || "A";
-
-    var dayKey = DAY_KEYS[dow];
-    var isWeekend = (dow === 0 || dow === 6);
-    var slug = dayKey;
-
-    if (isWeekend) {
-      var nowMinutes = parseInt(hh, 10) * 60 + parseInt(mm, 10);
-      var cutoffBits = WEEKEND_PM_CUTOFF.split(":").map(Number);
-      var cutoffMinutes = cutoffBits[0] * 60 + cutoffBits[1];
-      slug = dayKey + (nowMinutes < cutoffMinutes ? "-am" : "-pm");
-    }
-
+    var cyclePos = ((weekIndex0 % rotationLength) + rotationLength) % rotationLength;
     return {
-      file: "schedules/week" + variant + "-" + slug + ".png?v=" + CACHE_BUST_VERSION,
-      weekNumber: weekNumber,
-      variant: variant,
-      dayLabel: parts.weekday,
-      dateLabel: y + "-" + parts.month + "-" + parts.day,
-      timeLabel: hh + ":" + mm + ":" + parts.second
+      weekNumber: cyclePos + 1,
+      day: WEEKDAY_MAP[parts.weekday] || parts.weekday,
+      dayFull: new Intl.DateTimeFormat("en-GB", { timeZone: TIMEZONE, weekday: "long" }).format(now)
     };
-  }
-
-  var currentSrc = "";
-  function refreshSchedule() {
-    var info = computeSchedule(new Date());
-    if (info.file !== currentSrc) {
-      var img = document.getElementById("scheduleImg");
-      var testImg = new Image();
-      testImg.onload = function () {
-        img.src = info.file;
-        document.getElementById("errorMsg").style.display = "none";
-        img.style.display = "block";
-      };
-      testImg.onerror = function () {
-        document.getElementById("errorMsg").innerHTML =
-          "Schedule image not found:<br><code>" + info.file + "</code>";
-        document.getElementById("errorMsg").style.display = "flex";
-        img.style.display = "none";
-      };
-      testImg.src = info.file;
-      currentSrc = info.file;
-    }
   }
 
   function tickClock() {
     var parts = getPartsInTZ(new Date());
     document.getElementById("clockTime").textContent =
       parts.hour + ":" + parts.minute + ":" + parts.second;
-
-    var weekdayFull = new Intl.DateTimeFormat("en-GB", {
+    var dateStr = new Intl.DateTimeFormat("en-GB", {
       timeZone: TIMEZONE, weekday: "long", day: "numeric", month: "long"
     }).format(new Date());
-    document.getElementById("clockDate").textContent = weekdayFull;
+    document.getElementById("clockDate").textContent = dateStr;
   }
 
-  chooseLayout();
-  window.addEventListener("resize", chooseLayout);
-  refreshSchedule();
+  function luminance(hex) {
+    hex = hex.replace("#", "");
+    if (hex.length === 3) hex = hex.split("").map(function (c) { return c + c; }).join("");
+    var r = parseInt(hex.substr(0, 2), 16) / 255;
+    var g = parseInt(hex.substr(2, 2), 16) / 255;
+    var b = parseInt(hex.substr(4, 2), 16) / 255;
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+
+  function showError(msg) {
+    var rows = document.getElementById("rows");
+    rows.innerHTML = '<div id="errorMsg">' + msg + '</div>';
+    document.getElementById("ruler").innerHTML = "";
+  }
+
+  var CATEGORY = getCategory();
+
+  function getNow() {
+    var params = new URLSearchParams(window.location.search);
+    var override = params.get("debug_now"); // e.g. ?debug_now=2026-10-05T16:30:00 — for testing only
+    return override ? new Date(override) : new Date();
+  }
+
+  function loadAndRender() {
+    if (!CATEGORY) {
+      showError('This page needs a category in the link — add <code>?cat=rec</code> or <code>?cat=comp</code> to the URL.');
+      return;
+    }
+    document.getElementById("catLabel").textContent = CATEGORY;
+
+    Promise.all([fetchSheet("Settings"), fetchSheet("Legend")])
+      .then(function (results) {
+        var settingsRows = results[0], legendRows = results[1];
+
+        var anchorDate = null, rotationLength = 1;
+        settingsRows.forEach(function (r) {
+          var label = (r[0] || "").toLowerCase();
+          var value = (r[1] || "").trim();
+          if (label.indexOf("week 1") !== -1) anchorDate = value;
+          if (label.indexOf("rotation length") !== -1) rotationLength = parseInt(value, 10) || 1;
+        });
+        if (!anchorDate) throw new Error("Settings tab is missing the 'Week 1 starts on' value.");
+
+        var legend = {};
+        legendRows.slice(1).forEach(function (r) {
+          var code = (r[0] || "").trim().toUpperCase();
+          if (!code) return;
+          legend[code] = { name: (r[1] || "").trim(), color: "#" + (r[2] || "999999").replace("#", "") };
+        });
+
+        var info = computeCurrentWeekAndDay(getNow(), anchorDate, rotationLength);
+        document.getElementById("dayLabel").textContent = info.dayFull;
+        document.getElementById("weekLabel").textContent = "Week " + info.weekNumber;
+
+        return fetchSheet("Week " + info.weekNumber).then(function (weekRows) {
+          renderLegend(legend);
+          renderSchedule(rowsToObjects(weekRows), legend, info.day);
+        });
+      })
+      .catch(function (err) {
+        console.error(err);
+        showError("Schedule data unavailable right now — it'll retry automatically.<br><span style=\"opacity:0.6;font-size:0.7em\">" +
+          (err && err.message ? err.message : "") + "</span>");
+      });
+  }
+
+  function renderLegend(legend) {
+    var el = document.getElementById("legend");
+    el.innerHTML = "";
+    Object.keys(legend).forEach(function (code) {
+      var item = document.createElement("div");
+      item.className = "legendItem";
+      var sw = document.createElement("div");
+      sw.className = "legendSwatch";
+      sw.style.background = legend[code].color;
+      item.appendChild(sw);
+      var label = document.createElement("span");
+      label.textContent = code + " = " + legend[code].name;
+      item.appendChild(label);
+      el.appendChild(item);
+    });
+  }
+
+  function renderSchedule(allRows, legend, currentDay) {
+    var sessions = allRows.filter(function (r) {
+      return (r.category || "").toLowerCase() === CATEGORY.toLowerCase() &&
+             (r.day || "").toLowerCase().indexOf(currentDay.toLowerCase()) === 0;
+    }).map(function (r) {
+      return {
+        squad: r.squad || "—",
+        activity: (r.activity || "").toUpperCase(),
+        start: parseTimeToMinutes(r.starttime),
+        end: parseTimeToMinutes(r.endtime)
+      };
+    }).filter(function (s) { return s.start !== null && s.end !== null && s.end > s.start; });
+
+    var rowsEl = document.getElementById("rows");
+    var rulerEl = document.getElementById("ruler");
+    rowsEl.innerHTML = "";
+    rulerEl.innerHTML = "";
+
+    if (!sessions.length) {
+      rowsEl.innerHTML = '<div id="emptyMsg">No ' + CATEGORY + ' classes scheduled today.</div>';
+      return;
+    }
+
+    var minMin = Math.min.apply(null, sessions.map(function (s) { return s.start; }));
+    var maxMin = Math.max.apply(null, sessions.map(function (s) { return s.end; }));
+    // round out to the nearest hour for a cleaner ruler
+    minMin = Math.floor(minMin / 60) * 60;
+    maxMin = Math.ceil(maxMin / 60) * 60;
+    var span = maxMin - minMin;
+
+    document.getElementById("weekLabel").textContent =
+      document.getElementById("weekLabel").textContent + " · " + formatMinutes(minMin) + " – " + formatMinutes(maxMin);
+
+    // squad order = first-seen order in the sheet
+    var squadOrder = [];
+    sessions.forEach(function (s) { if (squadOrder.indexOf(s.squad) === -1) squadOrder.push(s.squad); });
+
+    // ruler ticks every 30 min, bold on the hour
+    for (var t = minMin; t <= maxMin; t += 30) {
+      var tick = document.createElement("div");
+      tick.className = "rulerTick" + (t % 60 === 0 ? " major" : "");
+      tick.style.left = ((t - minMin) / span * 100) + "%";
+      tick.textContent = t % 60 === 0 ? formatMinutes(t) : "";
+      rulerEl.appendChild(tick);
+    }
+
+    squadOrder.forEach(function (squad) {
+      var rowEl = document.createElement("div");
+      rowEl.className = "squadRow";
+
+      var labelEl = document.createElement("div");
+      labelEl.className = "squadLabel";
+      labelEl.textContent = squad;
+      rowEl.appendChild(labelEl);
+
+      var trackEl = document.createElement("div");
+      trackEl.className = "squadTrack";
+
+      sessions.filter(function (s) { return s.squad === squad; }).forEach(function (s) {
+        var block = document.createElement("div");
+        block.className = "block";
+        var leftPct = (s.start - minMin) / span * 100;
+        var widthPct = (s.end - s.start) / span * 100;
+        block.style.left = leftPct + "%";
+        block.style.width = widthPct + "%";
+        var info = legend[s.activity] || { name: s.activity, color: "#607080" };
+        block.style.background = info.color;
+        block.style.color = luminance(info.color) > 0.55 ? "#12202f" : "#ffffff";
+        block.innerHTML = '<span class="code">' + s.activity + '</span><span class="time">' +
+          formatMinutes(s.start) + '–' + formatMinutes(s.end) + '</span>';
+        trackEl.appendChild(block);
+      });
+
+      rowEl.appendChild(trackEl);
+      rowsEl.appendChild(rowEl);
+    });
+  }
+
   tickClock();
   setInterval(tickClock, 1000);
-  setInterval(refreshSchedule, 15000);
+  loadAndRender();
+  setInterval(loadAndRender, REFRESH_MS);
 
-  // Full reload once a day just after midnight SGT, as a safety net so the
-  // page never silently drifts (also clears any memory build-up from
-  // running unattended for weeks at a time).
+  // Full reload once a day just after midnight SGT, as a safety net.
   (function scheduleMidnightReload() {
     var parts = getPartsInTZ(new Date());
     var msNow = parseInt(parts.hour) * 3600000 + parseInt(parts.minute) * 60000 + parseInt(parts.second) * 1000;
