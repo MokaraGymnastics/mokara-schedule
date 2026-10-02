@@ -45,7 +45,7 @@
      letter-by-letter (unreadable, and taller than the block) — it just overflows past the
      block's own colored edge as one intact word. The z-index bump keeps that spilled text
      readable on top of whatever neighboring block it crosses over. */
-  .block { position: absolute; top: 4px; bottom: 4px; border-radius: 7px; box-sizing: border-box; padding: 6px 9px; overflow: visible; font-size: clamp(12px, 1.7vh, 18px); line-height: 1.25; box-shadow: 0 2px 5px rgba(0,0,0,0.4); z-index: 1; }
+  .block { position: absolute; top: 4px; bottom: 4px; border-radius: 7px; box-sizing: border-box; padding: 6px 9px; overflow: visible; font-size: clamp(12px, 1.7vh, 18px); line-height: 1.25; box-shadow: 0 2px 5px rgba(0,0,0,0.4); }
   .block .label { font-weight: 800; display: block; position: relative; z-index: 2; }
   .block .loc { display: block; opacity: 0.9; font-size: 0.85em; font-weight: 700; margin-top: 1px; position: relative; z-index: 2; }
   #emptyMsg, #errorMsg { margin: auto; text-align: center; opacity: 0.85; font-size: clamp(16px, 2.2vh, 26px); padding: 20px; color: var(--teal-light); }
