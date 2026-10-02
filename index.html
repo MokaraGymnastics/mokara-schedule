@@ -189,14 +189,22 @@
     return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
   }
 
-  function buildRuler(rowData, rulerRowIdx, startCol, endColExclusive) {
+  function buildRuler(rowData, rulerRowIdx, startCol, endColExclusive, isAMSection) {
     var ruler = {};
-    var offset = 0, last = -1;
+    var offset = 0, last = -1, initialized = false;
     var row = rowData[rulerRowIdx];
     for (var c = startCol; c < endColExclusive; c++) {
       var t = cellText(row.values[c]);
       var base = parseTimeLabel(t);
       if (base === null) continue;
+      if (!initialized) {
+        // Sheet times are bare "4:00" style with no AM/PM. Weekday practice sessions
+        // run afternoon/evening, so hours 1-11 default to PM unless this is an
+        // explicitly-labeled "... AM" weekend section.
+        var hour = Math.floor(base / 60);
+        if (!isAMSection && hour >= 1 && hour < 12) offset = 12 * 60;
+        initialized = true;
+      }
       var val = base + offset;
       if (val < last) { offset += 12 * 60; val = base + offset; }
       last = val;
@@ -248,7 +256,8 @@
     for (var rr = rulerRowIdx; rr < nextIndex; rr++) {
       if (rowData[rr] && rowData[rr].values) maxCols = Math.max(maxCols, rowData[rr].values.length);
     }
-    var ruler = buildRuler(rowData, rulerRowIdx, 2, maxCols);
+    var isAMSection = sectionLabel.indexOf("AM") !== -1;
+    var ruler = buildRuler(rowData, rulerRowIdx, 2, maxCols, isAMSection);
     var rulerCols = Object.keys(ruler).map(Number).sort(function (a, b) { return a - b; });
     return { squadStart: rulerRowIdx + 1, squadEnd: nextIndex, ruler: ruler, rulerCols: rulerCols, maxCols: maxCols };
   }
