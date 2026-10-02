@@ -18,10 +18,14 @@
   html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--navy-deep); overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--cream); }
   #page { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--navy-deep); }
   #topBar { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; padding: clamp(14px, 2vh, 28px) clamp(20px, 2.4vw, 44px); background: var(--navy); box-shadow: 0 3px 14px rgba(0,0,0,0.35); border-bottom: 3px solid var(--yellow); }
-  #brand { font-weight: 800; letter-spacing: 2px; font-size: clamp(20px, 3vh, 34px); color: var(--cream); }
+  #brand { font-weight: 800; letter-spacing: 2px; font-size: clamp(18px, 2.6vh, 28px); color: var(--cream); }
+  #topRight { display: flex; align-items: center; gap: clamp(14px, 1.8vw, 28px); }
+  #clockBlock { text-align: right; border-right: 2px solid rgba(255,255,255,0.15); padding-right: clamp(14px, 1.8vw, 28px); }
+  #clockDate { font-size: clamp(10px, 1.2vh, 14px); font-weight: 700; color: var(--teal-bright); opacity: 0.9; }
+  #clockTime { font-size: clamp(15px, 2vh, 22px); font-weight: 800; letter-spacing: 0.5px; font-variant-numeric: tabular-nums; color: var(--cream); }
   #dayInfo { text-align: right; }
-  #dayInfo .day { font-size: clamp(24px, 3.6vh, 42px); font-weight: 800; color: var(--cream); }
-  #dayInfo .sub { font-size: clamp(14px, 1.8vh, 22px); opacity: 0.85; color: var(--teal-bright); font-weight: 600; }
+  #dayInfo .day { font-size: clamp(18px, 2.6vh, 30px); font-weight: 800; color: var(--cream); }
+  #dayInfo .sub { font-size: clamp(11px, 1.4vh, 17px); opacity: 0.85; color: var(--teal-bright); font-weight: 600; }
   #body { flex: 1 1 auto; display: flex; min-height: 0; }
   #gridArea { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; padding: clamp(12px, 1.8vh, 26px) clamp(16px, 2vw, 34px); overflow: hidden; }
   #ruler { display: flex; flex: 0 0 auto; height: clamp(26px, 3.2vh, 42px); margin-left: var(--label-width, 180px); position: relative; border-bottom: 2px solid rgba(255,255,255,0.18); margin-bottom: 6px; }
@@ -42,9 +46,6 @@
   .block .loc { display: block; opacity: 0.9; font-size: 0.82em; font-weight: 600; }
   .block .time { display: block; opacity: 0.8; font-size: 0.76em; white-space: nowrap; }
   #emptyMsg, #errorMsg { margin: auto; text-align: center; opacity: 0.85; font-size: clamp(16px, 2.2vh, 26px); padding: 20px; color: var(--teal-light); }
-  #sidebar { flex: 0 0 clamp(170px, 17vw, 280px); background: var(--navy); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(12px, 2vh, 26px); padding: 12px; text-align: center; border-left: 3px solid var(--yellow); }
-  #clockDate { font-size: clamp(15px, 2.1vh, 26px); font-weight: 700; color: var(--teal-bright); }
-  #clockTime { font-size: clamp(28px, 4.6vh, 58px); font-weight: 800; letter-spacing: 1px; font-variant-numeric: tabular-nums; color: var(--cream); }
   #legend { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: clamp(10px, 1.4vw, 24px); align-items: center; padding: clamp(8px, 1.2vh, 16px) clamp(20px, 2.4vw, 44px); background: var(--navy-deep); font-size: clamp(11px, 1.3vh, 15px); border-top: 1px solid rgba(255,255,255,0.1); }
   .legendItem { display: flex; align-items: center; gap: 6px; opacity: 0.92; color: var(--teal-light); }
   .legendItem b { color: var(--yellow); font-weight: 800; }
@@ -54,19 +55,21 @@
 <div id="page">
   <div id="topBar">
     <div id="brand">MOKARA GYMNASTICS</div>
-    <div id="dayInfo">
-      <div class="day" id="dayLabel">-</div>
-      <div class="sub" id="weekLabel">-</div>
+    <div id="topRight">
+      <div id="clockBlock">
+        <div id="clockDate">-</div>
+        <div id="clockTime">--:--:--</div>
+      </div>
+      <div id="dayInfo">
+        <div class="day" id="dayLabel">-</div>
+        <div class="sub" id="weekLabel">-</div>
+      </div>
     </div>
   </div>
   <div id="body">
     <div id="gridArea">
       <div id="ruler"></div>
       <div id="rows"></div>
-    </div>
-    <div id="sidebar">
-      <div id="clockDate">-</div>
-      <div id="clockTime">--:--:--</div>
     </div>
   </div>
   <div id="legend"></div>
