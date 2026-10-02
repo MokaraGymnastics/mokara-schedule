@@ -5,210 +5,47 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mokara Gymnastics — Live Schedule</title>
 <style>
-  html, body {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    background: #0d1b2a;
-    overflow: hidden;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    color: #fff;
+  :root {
+    --navy: #1B365D;
+    --navy-deep: #122441;
+    --teal-bright: #A4DBE8;
+    --teal-light: #D1EDF3;
+    --purple-blue: #8094DD;
+    --purple-light: #BECAEA;
+    --cream: #F2F1E7;
+    --yellow: #F8EBB1;
   }
-  #page {
-    position: fixed;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    background: #0d1b2a;
-  }
-  #topBar {
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: clamp(10px, 1.6vh, 22px) clamp(16px, 2vw, 36px);
-    background: #16233b;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.25);
-  }
-  #brand {
-    font-weight: 700;
-    letter-spacing: 2px;
-    font-size: clamp(14px, 2vh, 24px);
-    opacity: 0.9;
-  }
-  #brand .cat {
-    font-weight: 500;
-    opacity: 0.7;
-    margin-left: 10px;
-    font-size: 0.7em;
-    text-transform: uppercase;
-    letter-spacing: 3px;
-  }
-  #dayInfo {
-    text-align: right;
-  }
-  #dayInfo .day {
-    font-size: clamp(18px, 2.6vh, 32px);
-    font-weight: 700;
-  }
-  #dayInfo .sub {
-    font-size: clamp(11px, 1.3vh, 16px);
-    opacity: 0.75;
-  }
-
-  #body {
-    flex: 1 1 auto;
-    display: flex;
-    min-height: 0;
-  }
-
-  #gridArea {
-    flex: 1 1 auto;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    padding: clamp(8px, 1.4vh, 20px) clamp(12px, 1.6vw, 28px);
-    overflow: hidden;
-  }
-
-  #ruler {
-    display: flex;
-    flex: 0 0 auto;
-    height: clamp(20px, 2.6vh, 34px);
-    margin-left: var(--label-width, 150px);
-    position: relative;
-    border-bottom: 1px solid rgba(255,255,255,0.15);
-    margin-bottom: 4px;
-  }
-  .rulerTick {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    display: flex;
-    align-items: flex-end;
-    font-size: clamp(9px, 1.1vh, 13px);
-    color: rgba(255,255,255,0.55);
-    border-left: 1px solid rgba(255,255,255,0.12);
-    padding-left: 4px;
-  }
-  .rulerTick.major {
-    color: rgba(255,255,255,0.85);
-    font-weight: 600;
-    border-left-color: rgba(255,255,255,0.3);
-  }
-
-  #rows {
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-    gap: clamp(4px, 0.8vh, 10px);
-    overflow-y: auto;
-    min-height: 0;
-  }
-  .squadRow {
-    flex: 1 1 0;
-    display: flex;
-    align-items: stretch;
-    min-height: 0;
-  }
-  .squadLabel {
-    flex: 0 0 var(--label-width, 150px);
-    width: var(--label-width, 150px);
-    display: flex;
-    align-items: center;
-    font-weight: 700;
-    font-size: clamp(11px, 1.5vh, 17px);
-    padding-right: 10px;
-    color: #cfe0ee;
-  }
-  .squadTrack {
-    position: relative;
-    flex: 1 1 auto;
-    background: rgba(255,255,255,0.04);
-    border-radius: 6px;
-  }
-  .block {
-    position: absolute;
-    top: 3px;
-    bottom: 3px;
-    border-radius: 5px;
-    box-sizing: border-box;
-    padding: 3px 6px;
-    overflow: hidden;
-    font-size: clamp(9px, 1.25vh, 14px);
-    line-height: 1.25;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.35);
-  }
-  .block .code {
-    font-weight: 800;
-    display: block;
-  }
-  .block .time {
-    display: block;
-    opacity: 0.85;
-    font-size: 0.85em;
-    white-space: nowrap;
-  }
-
-  #emptyMsg, #errorMsg {
-    margin: auto;
-    text-align: center;
-    opacity: 0.75;
-    font-size: clamp(14px, 2vh, 22px);
-    padding: 20px;
-  }
-
-  #sidebar {
-    flex: 0 0 clamp(150px, 16vw, 260px);
-    background: #16233b;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: clamp(10px, 1.8vh, 22px);
-    padding: 10px;
-    text-align: center;
-    border-left: 1px solid rgba(255,255,255,0.08);
-  }
-  #clockDate {
-    font-size: clamp(13px, 1.9vh, 24px);
-    font-weight: 500;
-    opacity: 0.9;
-  }
-  #clockTime {
-    font-size: clamp(24px, 4vh, 52px);
-    font-weight: 700;
-    letter-spacing: 1px;
-    font-variant-numeric: tabular-nums;
-  }
-
-  #legend {
-    flex: 0 0 auto;
-    display: flex;
-    flex-wrap: wrap;
-    gap: clamp(8px, 1.2vw, 20px);
-    align-items: center;
-    padding: clamp(6px, 1vh, 14px) clamp(16px, 2vw, 36px);
-    background: #101d30;
-    font-size: clamp(9px, 1.15vh, 13px);
-  }
-  .legendItem {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    opacity: 0.9;
-  }
-  .legendSwatch {
-    width: 14px;
-    height: 14px;
-    border-radius: 3px;
-    flex: 0 0 auto;
-  }
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--navy-deep); overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--cream); }
+  #page { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--navy-deep); }
+  #topBar { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; padding: clamp(14px, 2vh, 28px) clamp(20px, 2.4vw, 44px); background: var(--navy); box-shadow: 0 3px 14px rgba(0,0,0,0.35); border-bottom: 3px solid var(--yellow); }
+  #brand { font-weight: 800; letter-spacing: 2px; font-size: clamp(20px, 3vh, 34px); color: var(--cream); }
+  #brand .cat { font-weight: 600; opacity: 0.95; margin-left: 14px; font-size: 0.62em; text-transform: uppercase; letter-spacing: 4px; color: var(--yellow); }
+  #dayInfo { text-align: right; }
+  #dayInfo .day { font-size: clamp(24px, 3.6vh, 42px); font-weight: 800; color: var(--cream); }
+  #dayInfo .sub { font-size: clamp(14px, 1.8vh, 22px); opacity: 0.85; color: var(--teal-bright); font-weight: 600; }
+  #body { flex: 1 1 auto; display: flex; min-height: 0; }
+  #gridArea { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; padding: clamp(12px, 1.8vh, 26px) clamp(16px, 2vw, 34px); overflow: hidden; }
+  #ruler { display: flex; flex: 0 0 auto; height: clamp(26px, 3.2vh, 42px); margin-left: var(--label-width, 180px); position: relative; border-bottom: 2px solid rgba(255,255,255,0.18); margin-bottom: 6px; }
+  .rulerTick { position: absolute; top: 0; bottom: 0; display: flex; align-items: flex-end; font-size: clamp(11px, 1.4vh, 16px); color: var(--teal-light); opacity: 0.8; border-left: 1px solid rgba(255,255,255,0.14); padding-left: 5px; font-weight: 600; }
+  .rulerTick.major { color: var(--cream); opacity: 1; font-weight: 800; border-left-color: rgba(255,255,255,0.35); }
+  #rows { flex: 1 1 auto; display: flex; flex-direction: column; gap: clamp(6px, 1vh, 12px); overflow-y: auto; min-height: 0; }
+  .squadRow { flex: 1 1 0; display: flex; align-items: stretch; min-height: 0; }
+  .squadLabel { flex: 0 0 var(--label-width, 180px); width: var(--label-width, 180px); display: flex; align-items: center; font-weight: 800; font-size: clamp(14px, 1.9vh, 22px); padding-right: 12px; color: var(--teal-bright); }
+  .squadTrack { position: relative; flex: 1 1 auto; background: rgba(255,255,255,0.05); border-radius: 8px; }
+  .block { position: absolute; top: 4px; bottom: 4px; border-radius: 7px; box-sizing: border-box; padding: 5px 9px; overflow: hidden; font-size: clamp(11px, 1.6vh, 17px); line-height: 1.25; box-shadow: 0 2px 5px rgba(0,0,0,0.4); }
+  .block .label { font-weight: 800; display: block; }
+  .block .loc { display: block; opacity: 0.9; font-size: 0.82em; font-weight: 600; }
+  .block .time { display: block; opacity: 0.8; font-size: 0.76em; white-space: nowrap; }
+  #emptyMsg, #errorMsg { margin: auto; text-align: center; opacity: 0.85; font-size: clamp(16px, 2.2vh, 26px); padding: 20px; color: var(--teal-light); }
+  #sidebar { flex: 0 0 clamp(170px, 17vw, 280px); background: var(--navy); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(12px, 2vh, 26px); padding: 12px; text-align: center; border-left: 3px solid var(--yellow); }
+  #clockDate { font-size: clamp(15px, 2.1vh, 26px); font-weight: 700; color: var(--teal-bright); }
+  #clockTime { font-size: clamp(28px, 4.6vh, 58px); font-weight: 800; letter-spacing: 1px; font-variant-numeric: tabular-nums; color: var(--cream); }
+  #legend { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: clamp(10px, 1.4vw, 24px); align-items: center; padding: clamp(8px, 1.2vh, 16px) clamp(20px, 2.4vw, 44px); background: var(--navy-deep); font-size: clamp(11px, 1.3vh, 15px); border-top: 1px solid rgba(255,255,255,0.1); }
+  .legendItem { display: flex; align-items: center; gap: 6px; opacity: 0.92; color: var(--teal-light); }
+  .legendItem b { color: var(--yellow); font-weight: 800; }
 </style>
 </head>
 <body>
-
 <div id="page">
   <div id="topBar">
     <div id="brand">MOKARA GYMNASTICS<span class="cat" id="catLabel"></span></div>
@@ -217,7 +54,6 @@
       <div class="sub" id="weekLabel">-</div>
     </div>
   </div>
-
   <div id="body">
     <div id="gridArea">
       <div id="ruler"></div>
@@ -228,31 +64,21 @@
       <div id="clockTime">--:--:--</div>
     </div>
   </div>
-
   <div id="legend"></div>
 </div>
-
 <script>
-/* =========================================================================
-   MOKARA GYMNASTICS — LIVE SCHEDULE DISPLAY (Google Sheet powered)
-   =========================================================================
-   All schedule content lives in a Google Sheet, not in this file. Nobody
-   should ever need to edit this file to change the schedule — see the
-   "Read Me" tab in the spreadsheet for how staff update things.
-
-   This page is loaded with a URL parameter telling it which category to
-   show, e.g.:
-     index.html?cat=rec
-     index.html?cat=comp
-   Point one TV's KitCast Website app at each URL.
-   ========================================================================= */
-
-  var SHEET_ID = "1y-e7Eqj6mPWsLAft51TSF55rBmcxxUMzjIZOelz7d3E";
+  // ---- Configuration ----
+  var SHEET_ID = "1Mc3GH64jMGS2weZvh-4RcRgvtP7jakxCSPulJwK2uso";
+  var API_KEY = "AIzaSyA2-7pL3Dy9-DTXbtVp2SXRQgeOOrtN86s";
   var TIMEZONE = "Asia/Singapore";
-  var REFRESH_MS = 120000; // re-check the spreadsheet every 2 minutes (well under the 10-min requirement)
-  var MAX_WEEKS_TO_TRY = 8; // safety cap; actual rotation length comes from the Settings tab
-
-  var DAY_ORDER = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  var REFRESH_MS = 120000;
+  var WEEK1_ANCHOR = "2026-09-07"; // Monday — Week 1 of the 5-week pattern
+  var ROTATION_LENGTH = 5;
+  var WEEK_TAB_MAP = { 1: "Week 1 and 4", 2: "Week 2", 3: "Week 3 and 5", 4: "Week 1 and 4", 5: "Week 3 and 5" };
+  // Squads NOT in this list are treated as Rec (named/individual squads). Update here if the coaches add new Comp squads.
+  var COMP_SQUADS = ["16s 20s 23s", "12s", "Pre-Devo", "Pre-Devo = Devo 2", "23/20s", "16s"];
+  var WEEKEND_CUTOFF_MIN = 13 * 60 + 30; // 1:30pm — splits Saturday/Sunday into AM/PM sections
+  var DAY_LABEL_RE = /^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday AM|Saturday PM|Sunday AM|Sunday PM)$/;
 
   function getCategory() {
     var params = new URLSearchParams(window.location.search);
@@ -261,88 +87,18 @@
     if (cat === "comp") return "Comp";
     return null;
   }
+  var CATEGORY = getCategory();
 
-  function sheetCsvUrl(sheetName) {
-    return "https://docs.google.com/spreadsheets/d/" + SHEET_ID +
-      "/gviz/tq?tqx=out:csv&sheet=" + encodeURIComponent(sheetName) +
-      "&_=" + Date.now(); // cache-bust every fetch
-  }
-
-  // Minimal CSV parser: handles quoted fields, embedded commas, and "" escapes.
-  function parseCSV(text) {
-    var rows = [];
-    var row = [];
-    var field = "";
-    var inQuotes = false;
-    for (var i = 0; i < text.length; i++) {
-      var c = text[i];
-      if (inQuotes) {
-        if (c === '"') {
-          if (text[i + 1] === '"') { field += '"'; i++; }
-          else { inQuotes = false; }
-        } else {
-          field += c;
-        }
-      } else {
-        if (c === '"') inQuotes = true;
-        else if (c === ',') { row.push(field); field = ""; }
-        else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ""; }
-        else if (c === '\r') { /* skip */ }
-        else field += c;
-      }
-    }
-    if (field.length || row.length) { row.push(field); rows.push(row); }
-    return rows.filter(function (r) { return r.some(function (c) { return c.trim() !== ""; }); });
-  }
-
-  function normalizeHeader(h) {
-    return h.trim().toLowerCase().replace(/[^a-z]/g, "");
-  }
-
-  function rowsToObjects(rows) {
-    if (!rows.length) return [];
-    var headers = rows[0].map(normalizeHeader);
-    return rows.slice(1).map(function (r) {
-      var obj = {};
-      headers.forEach(function (h, idx) { obj[h] = (r[idx] || "").trim(); });
-      return obj;
-    });
-  }
-
-  function fetchSheet(sheetName) {
-    return fetch(sheetCsvUrl(sheetName)).then(function (res) {
-      if (!res.ok) throw new Error("Could not load sheet: " + sheetName);
-      return res.text();
-    }).then(parseCSV);
-  }
-
-  // Parses times like "4:00 PM", "4:00PM", "16:00", "16:00:00" -> minutes since midnight
-  function parseTimeToMinutes(str) {
-    if (!str) return null;
-    str = str.trim();
-    var m = str.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([AaPp][Mm])?$/);
-    if (!m) return null;
-    var h = parseInt(m[1], 10);
-    var min = parseInt(m[2], 10);
-    var ampm = m[4] ? m[4].toUpperCase() : null;
-    if (ampm === "PM" && h !== 12) h += 12;
-    if (ampm === "AM" && h === 12) h = 0;
-    return h * 60 + min;
-  }
-
-  function formatMinutes(mins) {
-    var h = Math.floor(mins / 60), m = mins % 60;
-    var ampm = h >= 12 ? "PM" : "AM";
-    var h12 = h % 12; if (h12 === 0) h12 = 12;
-    return h12 + (m ? ":" + (m < 10 ? "0" : "") + m : "") + ampm;
+  function getNow() {
+    var params = new URLSearchParams(window.location.search);
+    var override = params.get("debug_now");
+    return override ? new Date(override) : new Date();
   }
 
   function getPartsInTZ(date) {
     var fmt = new Intl.DateTimeFormat("en-CA", {
-      timeZone: TIMEZONE,
-      year: "numeric", month: "2-digit", day: "2-digit",
-      hour: "2-digit", minute: "2-digit", second: "2-digit",
-      hour12: false, weekday: "short"
+      timeZone: TIMEZONE, year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", hour12: false, weekday: "long"
     });
     var parts = {};
     fmt.formatToParts(date).forEach(function (p) { parts[p.type] = p.value; });
@@ -351,208 +107,333 @@
 
   function dateOnlyUTC(y, m, d) { return Date.UTC(y, m - 1, d); }
 
-  var WEEKDAY_MAP = { Mon: "Mon", Tue: "Tue", Wed: "Wed", Thu: "Thu", Fri: "Fri", Sat: "Sat", Sun: "Sun" };
+  function categorize(squadName) {
+    return COMP_SQUADS.indexOf(squadName.trim()) !== -1 ? "Comp" : "Rec";
+  }
 
-  function computeCurrentWeekAndDay(now, anchorDateStr, rotationLength) {
+  function colorToHex(c) {
+    if (!c) return null;
+    function ch(v) { return Math.round((v || 0) * 255).toString(16).padStart(2, "0"); }
+    return "#" + ch(c.red) + ch(c.green) + ch(c.blue);
+  }
+
+  function luminance(hex) {
+    var h = hex.replace("#", "");
+    var r = parseInt(h.substr(0, 2), 16) / 255;
+    var g = parseInt(h.substr(2, 2), 16) / 255;
+    var b = parseInt(h.substr(4, 2), 16) / 255;
+    function lin(c) { return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  }
+
+  function textColorFor(hex) {
+    return luminance(hex) > 0.5 ? "#16233b" : "#ffffff";
+  }
+
+  function computeWeekAndSection(now) {
     var parts = getPartsInTZ(now);
     var y = parseInt(parts.year, 10), m = parseInt(parts.month, 10), d = parseInt(parts.day, 10);
-    var startBits = anchorDateStr.split("-").map(Number);
+    var startBits = WEEK1_ANCHOR.split("-").map(Number);
     var startUTC = dateOnlyUTC(startBits[0], startBits[1], startBits[2]);
     var todayUTC = dateOnlyUTC(y, m, d);
     var daysSinceStart = Math.round((todayUTC - startUTC) / 86400000);
     var weekIndex0 = Math.floor(daysSinceStart / 7);
-    var cyclePos = ((weekIndex0 % rotationLength) + rotationLength) % rotationLength;
-    return {
-      weekNumber: cyclePos + 1,
-      day: WEEKDAY_MAP[parts.weekday] || parts.weekday,
-      dayFull: new Intl.DateTimeFormat("en-GB", { timeZone: TIMEZONE, weekday: "long" }).format(now)
-    };
-  }
-
-  function tickClock() {
-    var parts = getPartsInTZ(new Date());
-    document.getElementById("clockTime").textContent =
-      parts.hour + ":" + parts.minute + ":" + parts.second;
-    var dateStr = new Intl.DateTimeFormat("en-GB", {
-      timeZone: TIMEZONE, weekday: "long", day: "numeric", month: "long"
-    }).format(new Date());
-    document.getElementById("clockDate").textContent = dateStr;
-  }
-
-  function luminance(hex) {
-    hex = hex.replace("#", "");
-    if (hex.length === 3) hex = hex.split("").map(function (c) { return c + c; }).join("");
-    var r = parseInt(hex.substr(0, 2), 16) / 255;
-    var g = parseInt(hex.substr(2, 2), 16) / 255;
-    var b = parseInt(hex.substr(4, 2), 16) / 255;
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  }
-
-  function showError(msg) {
-    var rows = document.getElementById("rows");
-    rows.innerHTML = '<div id="errorMsg">' + msg + '</div>';
-    document.getElementById("ruler").innerHTML = "";
-  }
-
-  var CATEGORY = getCategory();
-
-  function getNow() {
-    var params = new URLSearchParams(window.location.search);
-    var override = params.get("debug_now"); // e.g. ?debug_now=2026-10-05T16:30:00 — for testing only
-    return override ? new Date(override) : new Date();
-  }
-
-  function loadAndRender() {
-    if (!CATEGORY) {
-      showError('This page needs a category in the link — add <code>?cat=rec</code> or <code>?cat=comp</code> to the URL.');
-      return;
+    var cyclePos = ((weekIndex0 % ROTATION_LENGTH) + ROTATION_LENGTH) % ROTATION_LENGTH;
+    var weekNumber = cyclePos + 1;
+    var tabName = WEEK_TAB_MAP[weekNumber];
+    var weekday = parts.weekday; // e.g. "Monday"
+    var minutesOfDay = parseInt(parts.hour, 10) * 60 + parseInt(parts.minute, 10);
+    var sectionLabel = weekday;
+    if (weekday === "Saturday" || weekday === "Sunday") {
+      sectionLabel = weekday + (minutesOfDay < WEEKEND_CUTOFF_MIN ? " AM" : " PM");
     }
-    document.getElementById("catLabel").textContent = CATEGORY;
-
-    Promise.all([fetchSheet("Settings"), fetchSheet("Legend")])
-      .then(function (results) {
-        var settingsRows = results[0], legendRows = results[1];
-
-        var anchorDate = null, rotationLength = 1;
-        settingsRows.forEach(function (r) {
-          var label = (r[0] || "").toLowerCase();
-          var value = (r[1] || "").trim();
-          if (label.indexOf("week 1") !== -1) anchorDate = value;
-          if (label.indexOf("rotation length") !== -1) rotationLength = parseInt(value, 10) || 1;
-        });
-        if (!anchorDate) throw new Error("Settings tab is missing the 'Week 1 starts on' value.");
-
-        var legend = {};
-        legendRows.slice(1).forEach(function (r) {
-          var code = (r[0] || "").trim().toUpperCase();
-          if (!code) return;
-          legend[code] = { name: (r[1] || "").trim(), color: "#" + (r[2] || "999999").replace("#", "") };
-        });
-
-        var info = computeCurrentWeekAndDay(getNow(), anchorDate, rotationLength);
-        document.getElementById("dayLabel").textContent = info.dayFull;
-        document.getElementById("weekLabel").textContent = "Week " + info.weekNumber;
-
-        return fetchSheet("Week " + info.weekNumber).then(function (weekRows) {
-          renderLegend(legend);
-          renderSchedule(rowsToObjects(weekRows), legend, info.day);
-        });
-      })
-      .catch(function (err) {
-        console.error(err);
-        showError("Schedule data unavailable right now — it'll retry automatically.<br><span style=\"opacity:0.6;font-size:0.7em\">" +
-          (err && err.message ? err.message : "") + "</span>");
-      });
+    return { weekNumber: weekNumber, tabName: tabName, sectionLabel: sectionLabel, weekday: weekday };
   }
 
-  function renderLegend(legend) {
-    var el = document.getElementById("legend");
-    el.innerHTML = "";
-    Object.keys(legend).forEach(function (code) {
-      var item = document.createElement("div");
-      item.className = "legendItem";
-      var sw = document.createElement("div");
-      sw.className = "legendSwatch";
-      sw.style.background = legend[code].color;
-      item.appendChild(sw);
-      var label = document.createElement("span");
-      label.textContent = code + " = " + legend[code].name;
-      item.appendChild(label);
-      el.appendChild(item);
+  function sheetsApiUrl(ranges, fields) {
+    var url = "https://sheets.googleapis.com/v4/spreadsheets/" + SHEET_ID + "?includeGridData=true&key=" + API_KEY + "&fields=" + encodeURIComponent(fields);
+    ranges.forEach(function (r) { url += "&ranges=" + encodeURIComponent(r); });
+    return url;
+  }
+
+  function fetchGrids(tabNames) {
+    var fields = "sheets(properties.title,merges,data.rowData.values(formattedValue,effectiveFormat.backgroundColor))";
+    var url = sheetsApiUrl(tabNames, fields);
+    return fetch(url).then(function (r) {
+      if (!r.ok) return r.text().then(function (t) { throw new Error("Sheets API error " + r.status + ": " + t.slice(0, 200)); });
+      return r.json();
+    }).then(function (json) {
+      var out = {};
+      (json.sheets || []).forEach(function (s) {
+        out[s.properties.title] = { rowData: (s.data && s.data[0] && s.data[0].rowData) || [], merges: s.merges || [] };
+      });
+      return out;
     });
   }
 
-  function renderSchedule(allRows, legend, currentDay) {
-    var sessions = allRows.filter(function (r) {
-      return (r.category || "").toLowerCase() === CATEGORY.toLowerCase() &&
-             (r.day || "").toLowerCase().indexOf(currentDay.toLowerCase()) === 0;
-    }).map(function (r) {
-      return {
-        squad: r.squad || "—",
-        activity: (r.activity || "").toUpperCase(),
-        start: parseTimeToMinutes(r.starttime),
-        end: parseTimeToMinutes(r.endtime)
-      };
-    }).filter(function (s) { return s.start !== null && s.end !== null && s.end > s.start; });
+  function cellText(cell) {
+    return ((cell && cell.formattedValue) || "").trim();
+  }
 
+  function findMerge(merges, rowIdx, colIdx) {
+    for (var i = 0; i < merges.length; i++) {
+      var m = merges[i];
+      if (rowIdx >= m.startRowIndex && rowIdx < m.endRowIndex && colIdx >= m.startColumnIndex && colIdx < m.endColumnIndex) return m;
+    }
+    return null;
+  }
+
+  function parseTimeLabel(str) {
+    var m = str.match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return null;
+    return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+  }
+
+  function buildRuler(rowData, rulerRowIdx, startCol, endColExclusive) {
+    var ruler = {};
+    var offset = 0, last = -1;
+    var row = rowData[rulerRowIdx];
+    for (var c = startCol; c < endColExclusive; c++) {
+      var t = cellText(row.values[c]);
+      var base = parseTimeLabel(t);
+      if (base === null) continue;
+      var val = base + offset;
+      if (val < last) { offset += 12 * 60; val = base + offset; }
+      last = val;
+      ruler[c] = val;
+    }
+    return ruler;
+  }
+
+  function parseActivityText(raw) {
+    var clean = raw.replace(/\s+/g, " ").trim();
+    // "Label (Location) 4:15 - 5:00" style
+    var m = clean.match(/^(.*?)\s*\(([^)]+)\)\s*[\d:apmAPM\-–\s]*$/);
+    if (m && m[1]) return { label: m[1].trim(), location: m[2].trim() };
+    // "CODE - Location" style
+    m = clean.match(/^([A-Za-z0-9]{1,6})\s*-\s*(.+)$/);
+    if (m) return { label: m[1].trim(), location: m[2].trim() };
+    // fallback: strip a trailing time range if present
+    var stripped = clean.replace(/[\d:apmAPM]{3,}\s*-\s*[\d:apmAPM]{3,}\s*$/, "").trim();
+    return { label: stripped || clean, location: "" };
+  }
+
+  function extractDaySection(rowData, merges, sectionLabel) {
+    var dayHeaders = [];
+    rowData.forEach(function (r, i) {
+      var v = cellText(r.values && r.values[0]);
+      if (DAY_LABEL_RE.test(v)) dayHeaders.push({ index: i, label: v });
+    });
+    var target = null, nextIndex = rowData.length;
+    for (var i = 0; i < dayHeaders.length; i++) {
+      if (dayHeaders[i].label === sectionLabel) {
+        target = dayHeaders[i];
+        if (i + 1 < dayHeaders.length) nextIndex = dayHeaders[i + 1].index;
+        break;
+      }
+    }
+    if (!target) return null;
+    // find ruler row: first row after header with a time-like value in a column >= 2
+    var rulerRowIdx = -1;
+    for (var r = target.index + 1; r < Math.min(nextIndex, target.index + 6); r++) {
+      var row = rowData[r];
+      if (!row || !row.values) continue;
+      for (var c = 2; c < Math.min(row.values.length, 6); c++) {
+        if (parseTimeLabel(cellText(row.values[c])) !== null) { rulerRowIdx = r; break; }
+      }
+      if (rulerRowIdx !== -1) break;
+    }
+    if (rulerRowIdx === -1) return null;
+    var maxCols = 0;
+    for (var rr = rulerRowIdx; rr < nextIndex; rr++) {
+      if (rowData[rr] && rowData[rr].values) maxCols = Math.max(maxCols, rowData[rr].values.length);
+    }
+    var ruler = buildRuler(rowData, rulerRowIdx, 2, maxCols);
+    var rulerCols = Object.keys(ruler).map(Number).sort(function (a, b) { return a - b; });
+    return { squadStart: rulerRowIdx + 1, squadEnd: nextIndex, ruler: ruler, rulerCols: rulerCols, maxCols: maxCols };
+  }
+
+  function sessionsForSquadRow(rowData, merges, rowIdx, ruler, rulerCols, maxCols) {
+    var sessions = [];
+    var row = rowData[rowIdx];
+    var col = rulerCols.length ? rulerCols[0] : 2;
+    var lastCol = rulerCols.length ? rulerCols[rulerCols.length - 1] : maxCols - 1;
+    while (col <= lastCol) {
+      var merge = findMerge(merges, rowIdx, col);
+      var srcRow = merge ? merge.startRowIndex : rowIdx;
+      var srcCol = merge ? merge.startColumnIndex : col;
+      var endCol = merge ? merge.endColumnIndex : col + 1;
+      var srcCell = rowData[srcRow] && rowData[srcRow].values ? rowData[srcRow].values[srcCol] : null;
+      var text = cellText(srcCell);
+      if (text) {
+        var startMin = ruler[col] !== undefined ? ruler[col] : null;
+        var endMin = ruler[endCol] !== undefined ? ruler[endCol] : (startMin !== null ? startMin + 15 * (endCol - col) : null);
+        if (startMin !== null && endMin !== null && endMin > startMin) {
+          var parsed = parseActivityText(text);
+          var bg = (srcCell.effectiveFormat && srcCell.effectiveFormat.backgroundColor) ? colorToHex(srcCell.effectiveFormat.backgroundColor) : "#5a6b85";
+          sessions.push({ label: parsed.label, location: parsed.location, start: startMin, end: endMin, bg: bg });
+        }
+      }
+      col = endCol;
+    }
+    return sessions;
+  }
+
+  function formatMinutes(mins) {
+    var h = Math.floor(mins / 60) % 24;
+    var m = mins % 60;
+    var ap = h >= 12 ? "PM" : "AM";
+    var h12 = h % 12; if (h12 === 0) h12 = 12;
+    return h12 + ":" + (m < 10 ? "0" : "") + m + " " + ap;
+  }
+
+  function tickClock() {
+    var now = new Date();
+    var dateFmt = new Intl.DateTimeFormat("en-GB", { timeZone: TIMEZONE, weekday: "short", day: "numeric", month: "short" });
+    var timeFmt = new Intl.DateTimeFormat("en-GB", { timeZone: TIMEZONE, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+    document.getElementById("clockDate").textContent = dateFmt.format(now);
+    document.getElementById("clockTime").textContent = timeFmt.format(now);
+  }
+
+  function showError(msg) {
+    document.getElementById("rows").innerHTML = '<div id="errorMsg">' + msg + "</div>";
+  }
+
+  var legendCache = null;
+  function fetchLegend() {
+    if (legendCache) return Promise.resolve(legendCache);
+    return fetchGrids(["Legend"]).then(function (grids) {
+      var rowData = grids["Legend"] ? grids["Legend"].rowData : [];
+      var items = [];
+      rowData.forEach(function (r) {
+        var code = cellText(r.values && r.values[1]);
+        var name = cellText(r.values && r.values[2]);
+        if (code && name) items.push({ code: code, name: name });
+      });
+      legendCache = items;
+      return items;
+    }).catch(function () { return []; });
+  }
+
+  function renderLegend(items) {
+    var el = document.getElementById("legend");
+    el.innerHTML = "";
+    items.forEach(function (it) {
+      var div = document.createElement("div");
+      div.className = "legendItem";
+      div.innerHTML = "<b>" + it.code + "</b><span>" + it.name + "</span>";
+      el.appendChild(div);
+    });
+  }
+
+  function renderSchedule(squads) {
     var rowsEl = document.getElementById("rows");
     var rulerEl = document.getElementById("ruler");
     rowsEl.innerHTML = "";
     rulerEl.innerHTML = "";
 
-    if (!sessions.length) {
-      rowsEl.innerHTML = '<div id="emptyMsg">No ' + CATEGORY + ' classes scheduled today.</div>';
+    if (!squads.length) {
+      rowsEl.innerHTML = '<div id="emptyMsg">No ' + CATEGORY + " classes scheduled right now.</div>";
       return;
     }
 
-    var minMin = Math.min.apply(null, sessions.map(function (s) { return s.start; }));
-    var maxMin = Math.max.apply(null, sessions.map(function (s) { return s.end; }));
-    // round out to the nearest hour for a cleaner ruler
-    minMin = Math.floor(minMin / 60) * 60;
-    maxMin = Math.ceil(maxMin / 60) * 60;
-    var span = maxMin - minMin;
+    var allStarts = [], allEnds = [];
+    squads.forEach(function (sq) {
+      sq.sessions.forEach(function (s) { allStarts.push(s.start); allEnds.push(s.end); });
+    });
+    if (!allStarts.length) {
+      rowsEl.innerHTML = '<div id="emptyMsg">No ' + CATEGORY + " classes scheduled right now.</div>";
+      return;
+    }
+    var minT = Math.min.apply(null, allStarts);
+    var maxT = Math.max.apply(null, allEnds);
+    var span = Math.max(maxT - minT, 1);
 
-    document.getElementById("weekLabel").textContent =
-      document.getElementById("weekLabel").textContent + " · " + formatMinutes(minMin) + " – " + formatMinutes(maxMin);
-
-    // squad order = first-seen order in the sheet
-    var squadOrder = [];
-    sessions.forEach(function (s) { if (squadOrder.indexOf(s.squad) === -1) squadOrder.push(s.squad); });
-
-    // ruler ticks every 30 min, bold on the hour
-    for (var t = minMin; t <= maxMin; t += 30) {
+    // Ruler ticks every 30 min, bold on the hour
+    for (var t = Math.ceil(minT / 15) * 15; t <= maxT; t += 15) {
+      var pct = ((t - minT) / span) * 100;
       var tick = document.createElement("div");
-      tick.className = "rulerTick" + (t % 60 === 0 ? " major" : "");
-      tick.style.left = ((t - minMin) / span * 100) + "%";
-      tick.textContent = t % 60 === 0 ? formatMinutes(t) : "";
+      var isHour = (t % 60) === 0;
+      tick.className = "rulerTick" + (isHour ? " major" : "");
+      tick.style.left = pct + "%";
+      tick.textContent = formatMinutes(t).replace(" ", "");
       rulerEl.appendChild(tick);
     }
 
-    squadOrder.forEach(function (squad) {
+    squads.forEach(function (sq) {
       var rowEl = document.createElement("div");
       rowEl.className = "squadRow";
-
-      var labelEl = document.createElement("div");
-      labelEl.className = "squadLabel";
-      labelEl.textContent = squad;
-      rowEl.appendChild(labelEl);
-
-      var trackEl = document.createElement("div");
-      trackEl.className = "squadTrack";
-
-      sessions.filter(function (s) { return s.squad === squad; }).forEach(function (s) {
+      var label = document.createElement("div");
+      label.className = "squadLabel";
+      label.textContent = sq.name;
+      var track = document.createElement("div");
+      track.className = "squadTrack";
+      sq.sessions.forEach(function (s) {
+        var left = ((s.start - minT) / span) * 100;
+        var width = ((s.end - s.start) / span) * 100;
         var block = document.createElement("div");
         block.className = "block";
-        var leftPct = (s.start - minMin) / span * 100;
-        var widthPct = (s.end - s.start) / span * 100;
-        block.style.left = leftPct + "%";
-        block.style.width = widthPct + "%";
-        var info = legend[s.activity] || { name: s.activity, color: "#607080" };
-        block.style.background = info.color;
-        block.style.color = luminance(info.color) > 0.55 ? "#12202f" : "#ffffff";
-        block.innerHTML = '<span class="code">' + s.activity + '</span><span class="time">' +
-          formatMinutes(s.start) + '–' + formatMinutes(s.end) + '</span>';
-        trackEl.appendChild(block);
+        block.style.left = left + "%";
+        block.style.width = Math.max(width, 1) + "%";
+        block.style.background = s.bg;
+        var fg = textColorFor(s.bg);
+        block.style.color = fg;
+        var html = '<span class="label">' + s.label + "</span>";
+        if (s.location) html += '<span class="loc">' + s.location + "</span>";
+        html += '<span class="time">' + formatMinutes(s.start) + "–" + formatMinutes(s.end) + "</span>";
+        block.innerHTML = html;
+        track.appendChild(block);
       });
-
-      rowEl.appendChild(trackEl);
+      rowEl.appendChild(label);
+      rowEl.appendChild(track);
       rowsEl.appendChild(rowEl);
     });
   }
+
+  function loadAndRender() {
+    if (!CATEGORY) { showError("Needs ?cat=rec or ?cat=comp in the URL."); return; }
+    document.getElementById("catLabel").textContent = CATEGORY;
+    var now = getNow();
+    var info = computeWeekAndSection(now);
+    document.getElementById("dayLabel").textContent = info.sectionLabel;
+    document.getElementById("weekLabel").textContent = "Week " + info.weekNumber;
+
+    Promise.all([fetchGrids([info.tabName]), fetchLegend()]).then(function (results) {
+      var grids = results[0];
+      var legendItems = results[1];
+      renderLegend(legendItems);
+      var sheet = grids[info.tabName];
+      if (!sheet) throw new Error("Could not read tab '" + info.tabName + "'.");
+      var section = extractDaySection(sheet.rowData, sheet.merges, info.sectionLabel);
+      if (!section) { renderSchedule([]); return; }
+      var squads = [];
+      for (var r = section.squadStart; r < section.squadEnd; r++) {
+        var row = sheet.rowData[r];
+        if (!row || !row.values) continue;
+        var name = cellText(row.values[0]);
+        if (!name) continue;
+        if (categorize(name) !== CATEGORY) continue;
+        var sessions = sessionsForSquadRow(sheet.rowData, sheet.merges, r, section.ruler, section.rulerCols, section.maxCols);
+        if (sessions.length) squads.push({ name: name, sessions: sessions });
+      }
+      renderSchedule(squads);
+    }).catch(function (err) {
+      console.error(err);
+      showError("Schedule data unavailable right now — it'll retry automatically.<br>" + (err && err.message ? err.message : ""));
+    });
+  }
+
+  (function scheduleMidnightReload() {
+    var now = new Date();
+    var next = new Date(now);
+    next.setHours(24, 1, 0, 0);
+    setTimeout(function () { window.location.reload(); }, next.getTime() - now.getTime());
+  })();
 
   tickClock();
   setInterval(tickClock, 1000);
   loadAndRender();
   setInterval(loadAndRender, REFRESH_MS);
-
-  // Full reload once a day just after midnight SGT, as a safety net.
-  (function scheduleMidnightReload() {
-    var parts = getPartsInTZ(new Date());
-    var msNow = parseInt(parts.hour) * 3600000 + parseInt(parts.minute) * 60000 + parseInt(parts.second) * 1000;
-    var msUntilMidnight = 86400000 - msNow + 5000;
-    setTimeout(function () { location.reload(); }, msUntilMidnight);
-  })();
 </script>
-
 </body>
 </html>
