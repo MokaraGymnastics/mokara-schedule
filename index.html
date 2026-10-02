@@ -38,9 +38,16 @@
   .squadLabel.cat-rec .sqTag { color: var(--yellow); }
   .groupDivider { flex: 0 0 auto; height: 1px; background: rgba(255,255,255,0.12); margin: 2px 0 2px var(--label-width, 180px); }
   .squadTrack { position: relative; flex: 1 1 auto; background: rgba(255,255,255,0.05); border-radius: 8px; }
-  .block { position: absolute; top: 4px; bottom: 4px; border-radius: 7px; box-sizing: border-box; padding: 6px 9px; overflow: hidden; font-size: clamp(12px, 1.7vh, 18px); line-height: 1.25; box-shadow: 0 2px 5px rgba(0,0,0,0.4); }
-  .block .label { font-weight: 800; display: block; overflow-wrap: break-word; word-break: break-word; }
-  .block .loc { display: block; opacity: 0.9; font-size: 0.85em; font-weight: 700; margin-top: 1px; overflow-wrap: break-word; word-break: break-word; }
+  /* overflow: visible (not hidden) on purpose — a short session (e.g. a 5-10 min "Flex" or
+     "Break") is often too narrow for even one word at this font size. Multi-word text still
+     wraps normally at word boundaries (so a wide block with a long location still wraps
+     cleanly across 2 lines), but a single word that doesn't fit is no longer forced to break
+     letter-by-letter (unreadable, and taller than the block) — it just overflows past the
+     block's own colored edge as one intact word. The z-index bump keeps that spilled text
+     readable on top of whatever neighboring block it crosses over. */
+  .block { position: absolute; top: 4px; bottom: 4px; border-radius: 7px; box-sizing: border-box; padding: 6px 9px; overflow: visible; font-size: clamp(12px, 1.7vh, 18px); line-height: 1.25; box-shadow: 0 2px 5px rgba(0,0,0,0.4); z-index: 1; }
+  .block .label { font-weight: 800; display: block; position: relative; z-index: 2; }
+  .block .loc { display: block; opacity: 0.9; font-size: 0.85em; font-weight: 700; margin-top: 1px; position: relative; z-index: 2; }
   #emptyMsg, #errorMsg { margin: auto; text-align: center; opacity: 0.85; font-size: clamp(16px, 2.2vh, 26px); padding: 20px; color: var(--teal-light); }
   #legend { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: clamp(10px, 1.4vw, 24px); align-items: center; padding: clamp(8px, 1.2vh, 16px) clamp(20px, 2.4vw, 44px); background: var(--navy-deep); font-size: clamp(11px, 1.3vh, 15px); border-top: 1px solid rgba(255,255,255,0.1); }
   .legendItem { display: flex; align-items: center; gap: 8px; opacity: 0.95; color: var(--teal-light); }
