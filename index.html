@@ -234,6 +234,31 @@
     return { label: stripped || clean, location: "" };
   }
 
+  // Comp squads' cells often carry their own explicit time range as free text, e.g.
+  // "Warm Up Condish (Team Rod + Team Tumble Strip) 4:00 - 5:00". Those merged cells don't
+  // always line up neatly with the 15-minute ruler grid (coaches resize them by hand), so the
+  // column-position math in sessionsForSquadRow can be several minutes off. When a cell's text
+  // ends with an explicit "H:MM - H:MM" range, that's the authoritative time — this extracts it.
+  function parseEmbeddedRange(raw, isAMSection) {
+    var clean = raw.replace(/\s+/g, " ").trim();
+    var m = clean.match(/(\d{1,2}:\d{2})\s*(?:am|pm|AM|PM)?\s*[-–]\s*(\d{1,2}:\d{2})\s*(?:am|pm|AM|PM)?\s*$/);
+    if (!m) return null;
+    var startBase = parseTimeLabel(m[1]);
+    var endBase = parseTimeLabel(m[2]);
+    if (startBase === null || endBase === null) return null;
+    function toAbsolute(base, prevAbsolute) {
+      var hour = Math.floor(base / 60);
+      var offset = (!isAMSection && hour >= 1 && hour < 12) ? 12 * 60 : 0;
+      var val = base + offset;
+      if (prevAbsolute !== null && val < prevAbsolute) val += 12 * 60;
+      return val;
+    }
+    var startAbs = toAbsolute(startBase, null);
+    var endAbs = toAbsolute(endBase, startAbs);
+    if (endAbs <= startAbs) return null;
+    return { start: startAbs, end: endAbs };
+  }
+
   // Resolves a block's display color from its activity label: an exact code match (WU, VT,
   // UB, ...) wins, then a keyword match against the fuller Comp-squad descriptions, then
   // "Break" is forced black, and anything else falls back to whatever color the coach set
@@ -286,10 +311,10 @@
     var isAMSection = sectionLabel.indexOf("AM") !== -1;
     var ruler = buildRuler(rowData, rulerRowIdx, 2, maxCols, isAMSection);
     var rulerCols = Object.keys(ruler).map(Number).sort(function (a, b) { return a - b; });
-    return { squadStart: rulerRowIdx + 1, squadEnd: nextIndex, ruler: ruler, rulerCols: rulerCols, maxCols: maxCols };
+    return { squadStart: rulerRowIdx + 1, squadEnd: nextIndex, ruler: ruler, rulerCols: rulerCols, maxCols: maxCols, isAMSection: isAMSection };
   }
 
-  function sessionsForSquadRow(rowData, merges, rowIdx, ruler, rulerCols, maxCols) {
+  function sessionsForSquadRow(rowData, merges, rowIdx, ruler, rulerCols, maxCols, isAMSection) {
     var sessions = [];
     var row = rowData[rowIdx];
     var col = rulerCols.length ? rulerCols[0] : 2;
@@ -302,8 +327,11 @@
       var srcCell = rowData[srcRow] && rowData[srcRow].values ? rowData[srcRow].values[srcCol] : null;
       var text = cellText(srcCell);
       if (text) {
-        var startMin = ruler[col] !== undefined ? ruler[col] : null;
-        var endMin = ruler[endCol] !== undefined ? ruler[endCol] : (startMin !== null ? startMin + 15 * (endCol - col) : null);
+        // Prefer the cell's own explicit time range (Comp squads write one in) over the
+        // column/merge position, since merges don't always land cleanly on the 15-min grid.
+        var embedded = parseEmbeddedRange(text, isAMSection);
+        var startMin = embedded ? embedded.start : (ruler[col] !== undefined ? ruler[col] : null);
+        var endMin = embedded ? embedded.end : (ruler[endCol] !== undefined ? ruler[endCol] : (startMin !== null ? startMin + 15 * (endCol - col) : null));
         if (startMin !== null && endMin !== null && endMin > startMin) {
           var parsed = parseActivityText(text);
           var bg = (srcCell.effectiveFormat && srcCell.effectiveFormat.backgroundColor) ? colorToHex(srcCell.effectiveFormat.backgroundColor) : "#5a6b85";
@@ -456,7 +484,7 @@
         if (!row || !row.values) continue;
         var name = cellText(row.values[0]);
         if (!name) continue;
-        var sessions = sessionsForSquadRow(sheet.rowData, sheet.merges, r, section.ruler, section.rulerCols, section.maxCols);
+        var sessions = sessionsForSquadRow(sheet.rowData, sheet.merges, r, section.ruler, section.rulerCols, section.maxCols, section.isAMSection);
         if (sessions.length) squads.push({ name: name, category: categorize(name), sessions: sessions });
       }
       // Comp squads first, then Rec squads, preserving sheet order within each group.
