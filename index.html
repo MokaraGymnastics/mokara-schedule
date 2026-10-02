@@ -79,9 +79,18 @@
   var COMP_SQUADS = ["16s 20s 23s", "12s", "Pre-Devo", "Pre-Devo = Devo 2", "23/20s", "16s"];
   var WEEKEND_CUTOFF_MIN = 13 * 60 + 30; // 1:30pm — splits Saturday/Sunday into AM/PM sections
   var DAY_LABEL_RE = /^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday AM|Saturday PM|Sunday AM|Sunday PM)$/;
-  // Brand palette used to color-code each legend abbreviation (WU, VT, UB, ...) — cycled
-  // by position so each gets its own distinct color.
-  var LEGEND_PALETTE = ["#90CBDF", "#7179D6", "#F1D47E", "#DD7D5F", "#BF69BF", "#5CC1A0", "#646D87"];
+  // One fixed, distinct color per activity type — this is the single source of truth for
+  // BOTH the legend chips and the actual schedule blocks, so they always match.
+  var CODE_COLORS = {
+    WU: "#90CBDF", // Warm Up
+    VT: "#7179D6", // Vault
+    UB: "#F1D47E", // Uneven Bars
+    BB: "#DD7D5F", // Balance Beam
+    FX: "#BF69BF", // Floor Exercise
+    TR: "#5CC1A0", // Trampoline
+    KG: "#646D87"  // Kindy Gym area
+  };
+  var BREAK_COLOR = "#000000";
 
   function getNow() {
     var params = new URLSearchParams(window.location.search);
@@ -226,6 +235,25 @@
     return { label: stripped || clean, location: "" };
   }
 
+  // Resolves a block's display color from its activity label: an exact code match (WU, VT,
+  // UB, ...) wins, then a keyword match against the fuller Comp-squad descriptions, then
+  // "Break" is forced black, and anything else falls back to whatever color the coach set
+  // on that cell in the sheet.
+  function resolveBlockColor(label, rawBg) {
+    var code = (label || "").trim().toUpperCase();
+    if (CODE_COLORS[code]) return CODE_COLORS[code];
+    var lc = (label || "").toLowerCase();
+    if (lc.indexOf("break") !== -1) return BREAK_COLOR;
+    if (lc.indexOf("warm up") !== -1) return CODE_COLORS.WU;
+    if (lc.indexOf("vault") !== -1) return CODE_COLORS.VT;
+    if (lc.indexOf("bars") !== -1) return CODE_COLORS.UB;
+    if (lc.indexOf("beam") !== -1) return CODE_COLORS.BB;
+    if (lc.indexOf("floor") !== -1) return CODE_COLORS.FX;
+    if (lc.indexOf("tramp") !== -1) return CODE_COLORS.TR;
+    if (lc.indexOf("presch") !== -1 || lc.indexOf("kindy") !== -1) return CODE_COLORS.KG;
+    return rawBg;
+  }
+
   function extractDaySection(rowData, merges, sectionLabel) {
     var dayHeaders = [];
     rowData.forEach(function (r, i) {
@@ -325,12 +353,12 @@
   function renderLegend(items) {
     var el = document.getElementById("legend");
     el.innerHTML = "";
-    items.forEach(function (it, idx) {
+    items.forEach(function (it) {
       var div = document.createElement("div");
       div.className = "legendItem";
-      // Cycle through the palette by position so each code gets its own distinct
-      // color as long as there are no more legend entries than palette colors.
-      var bg = LEGEND_PALETTE[idx % LEGEND_PALETTE.length];
+      // Looked up by the exact code, same as the schedule blocks, so the legend always
+      // matches what's shown above it.
+      var bg = CODE_COLORS[(it.code || "").trim().toUpperCase()] || "#5a6b85";
       var fg = textColorFor(bg);
       div.innerHTML = '<span class="legendSwatch" style="background:' + bg + ";color:" + fg + '">' + it.code + "</span><span>" + it.name + "</span>";
       el.appendChild(div);
@@ -394,8 +422,9 @@
         block.className = "block";
         block.style.left = left + "%";
         block.style.width = Math.max(width, 1) + "%";
-        block.style.background = s.bg;
-        var fg = blockTextColor(s.bg);
+        var resolvedBg = resolveBlockColor(s.label, s.bg);
+        block.style.background = resolvedBg;
+        var fg = blockTextColor(resolvedBg);
         block.style.color = fg;
         var html = '<span class="label">' + s.label + "</span>";
         if (s.location) html += '<span class="loc">' + s.location + "</span>";
