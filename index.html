@@ -38,16 +38,9 @@
   .squadLabel.cat-rec .sqTag { color: var(--yellow); }
   .groupDivider { flex: 0 0 auto; height: 1px; background: rgba(255,255,255,0.12); margin: 2px 0 2px var(--label-width, 180px); }
   .squadTrack { position: relative; flex: 1 1 auto; background: rgba(255,255,255,0.05); border-radius: 8px; }
-  /* overflow: visible (not hidden) on purpose — a short session (e.g. a 5-10 min "Flex" or
-     "Break") is often too narrow for even one word at this font size. Multi-word text still
-     wraps normally at word boundaries (so a wide block with a long location still wraps
-     cleanly across 2 lines), but a single word that doesn't fit is no longer forced to break
-     letter-by-letter (unreadable, and taller than the block) — it just overflows past the
-     block's own colored edge as one intact word. The z-index bump keeps that spilled text
-     readable on top of whatever neighboring block it crosses over. */
-  .block { position: absolute; top: 4px; bottom: 4px; border-radius: 7px; box-sizing: border-box; padding: 6px 9px; overflow: visible; font-size: clamp(12px, 1.7vh, 18px); line-height: 1.25; box-shadow: 0 2px 5px rgba(0,0,0,0.4); }
-  .block .label { font-weight: 800; display: block; position: relative; z-index: 2; }
-  .block .loc { display: block; opacity: 0.9; font-size: 0.85em; font-weight: 700; margin-top: 1px; position: relative; z-index: 2; }
+  .block { position: absolute; top: 4px; bottom: 4px; border-radius: 7px; box-sizing: border-box; padding: 6px 9px; overflow: hidden; font-size: clamp(12px, 1.7vh, 18px); line-height: 1.25; box-shadow: 0 2px 5px rgba(0,0,0,0.4); }
+  .block .label { font-weight: 800; display: block; }
+  .block .loc { display: block; opacity: 0.9; font-size: 0.85em; font-weight: 700; margin-top: 1px; }
   #emptyMsg, #errorMsg { margin: auto; text-align: center; opacity: 0.85; font-size: clamp(16px, 2.2vh, 26px); padding: 20px; color: var(--teal-light); }
   #legend { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: clamp(10px, 1.4vw, 24px); align-items: center; padding: clamp(8px, 1.2vh, 16px) clamp(20px, 2.4vw, 44px); background: var(--navy-deep); font-size: clamp(11px, 1.3vh, 15px); border-top: 1px solid rgba(255,255,255,0.1); }
   .legendItem { display: flex; align-items: center; gap: 8px; opacity: 0.95; color: var(--teal-light); }
@@ -399,6 +392,13 @@
     });
   }
 
+  // A session rendered narrower than this (in pixels) doesn't have room for its own label to
+  // read cleanly on one or two lines. Rather than relying on the text to overflow its box
+  // (fragile — it just gets painted over by whatever's next in that same row), we widen the
+  // block itself to this minimum and push back the start of whatever follows it, so the
+  // colored box a viewer sees always actually contains its own label.
+  var MIN_BLOCK_PX = 110;
+
   function renderSchedule(squads) {
     var rowsEl = document.getElementById("rows");
     var rulerEl = document.getElementById("ruler");
@@ -433,7 +433,11 @@
       rulerEl.appendChild(tick);
     }
 
+    // Build the row skeletons (label + empty track) first so we can measure a real track's
+    // pixel width — every row's track is the same width — before deciding how many minutes
+    // of on-screen width a too-short session needs to borrow from its neighbor.
     var lastCategory = null;
+    var rowItems = [];
     squads.forEach(function (sq) {
       if (lastCategory !== null && sq.category !== lastCategory) {
         var divider = document.createElement("div");
@@ -449,25 +453,48 @@
       label.innerHTML = '<span class="sqName">' + sq.name + '</span><span class="sqTag">' + sq.category + '</span>';
       var track = document.createElement("div");
       track.className = "squadTrack";
-      sq.sessions.forEach(function (s) {
-        var left = ((s.start - minT) / span) * 100;
-        var width = ((s.end - s.start) / span) * 100;
-        var block = document.createElement("div");
-        block.className = "block";
-        block.style.left = left + "%";
-        block.style.width = Math.max(width, 1) + "%";
-        var resolvedBg = resolveBlockColor(s.label, s.bg);
-        block.style.background = resolvedBg;
-        var fg = blockTextColor(resolvedBg);
-        block.style.color = fg;
-        var html = '<span class="label">' + s.label + "</span>";
-        if (s.location) html += '<span class="loc">' + s.location + "</span>";
-        block.innerHTML = html;
-        track.appendChild(block);
-      });
       rowEl.appendChild(label);
       rowEl.appendChild(track);
       rowsEl.appendChild(rowEl);
+      rowItems.push({ sq: sq, track: track });
+    });
+
+    var trackWidthPx = (rowItems[0] && rowItems[0].track.clientWidth) || 800;
+    var pxPerMin = trackWidthPx / span;
+    var minVisibleMinutes = MIN_BLOCK_PX / pxPerMin;
+
+    rowItems.forEach(function (item) {
+      // Left-to-right sweep per row: stretch any session that would render narrower than
+      // MIN_BLOCK_PX out to that minimum, and start the next session no earlier than where
+      // this one now visually ends — so sessions never overlap, short ones just borrow a
+      // little width from whatever comes right after them. Capped at the day's own end so
+      // nothing renders past the edge of the chart.
+      var cursor = minT;
+      var visual = item.sq.sessions.map(function (s) {
+        var vStart = Math.max(s.start, cursor);
+        var vEnd = Math.max(s.end, vStart + minVisibleMinutes);
+        if (vEnd > maxT) vEnd = maxT;
+        if (vEnd < vStart) vEnd = vStart;
+        cursor = vEnd;
+        return { s: s, vStart: vStart, vEnd: vEnd };
+      });
+
+      visual.forEach(function (v) {
+        var left = ((v.vStart - minT) / span) * 100;
+        var width = ((v.vEnd - v.vStart) / span) * 100;
+        var block = document.createElement("div");
+        block.className = "block";
+        block.style.left = left + "%";
+        block.style.width = Math.max(width, 0.3) + "%";
+        var resolvedBg = resolveBlockColor(v.s.label, v.s.bg);
+        block.style.background = resolvedBg;
+        var fg = blockTextColor(resolvedBg);
+        block.style.color = fg;
+        var html = '<span class="label">' + v.s.label + "</span>";
+        if (v.s.location) html += '<span class="loc">' + v.s.location + "</span>";
+        block.innerHTML = html;
+        item.track.appendChild(block);
+      });
     });
   }
 
