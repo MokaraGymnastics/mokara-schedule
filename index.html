@@ -19,7 +19,6 @@
   #page { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--navy-deep); }
   #topBar { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; padding: clamp(14px, 2vh, 28px) clamp(20px, 2.4vw, 44px); background: var(--navy); box-shadow: 0 3px 14px rgba(0,0,0,0.35); border-bottom: 3px solid var(--yellow); }
   #brand { font-weight: 800; letter-spacing: 2px; font-size: clamp(20px, 3vh, 34px); color: var(--cream); }
-  #brand .cat { font-weight: 600; opacity: 0.95; margin-left: 14px; font-size: 0.62em; text-transform: uppercase; letter-spacing: 4px; color: var(--yellow); }
   #dayInfo { text-align: right; }
   #dayInfo .day { font-size: clamp(24px, 3.6vh, 42px); font-weight: 800; color: var(--cream); }
   #dayInfo .sub { font-size: clamp(14px, 1.8vh, 22px); opacity: 0.85; color: var(--teal-bright); font-weight: 600; }
@@ -30,7 +29,13 @@
   .rulerTick.major { color: var(--cream); opacity: 1; font-weight: 800; border-left-color: rgba(255,255,255,0.35); }
   #rows { flex: 1 1 auto; display: flex; flex-direction: column; gap: clamp(6px, 1vh, 12px); overflow-y: auto; min-height: 0; }
   .squadRow { flex: 1 1 0; display: flex; align-items: stretch; min-height: 0; }
-  .squadLabel { flex: 0 0 var(--label-width, 180px); width: var(--label-width, 180px); display: flex; align-items: center; font-weight: 800; font-size: clamp(14px, 1.9vh, 22px); padding-right: 12px; color: var(--teal-bright); }
+  .squadLabel { flex: 0 0 var(--label-width, 180px); width: var(--label-width, 180px); display: flex; flex-direction: column; align-items: flex-start; justify-content: center; font-weight: 800; font-size: clamp(14px, 1.9vh, 22px); padding-right: 12px; color: var(--teal-bright); }
+  .squadLabel .sqTag { font-size: 0.56em; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; opacity: 0.85; margin-top: 2px; }
+  .squadLabel.cat-comp { color: var(--purple-light); }
+  .squadLabel.cat-comp .sqTag { color: var(--purple-blue); }
+  .squadLabel.cat-rec { color: var(--yellow); }
+  .squadLabel.cat-rec .sqTag { color: var(--yellow); }
+  .groupDivider { flex: 0 0 auto; height: 1px; background: rgba(255,255,255,0.12); margin: 2px 0 2px var(--label-width, 180px); }
   .squadTrack { position: relative; flex: 1 1 auto; background: rgba(255,255,255,0.05); border-radius: 8px; }
   .block { position: absolute; top: 4px; bottom: 4px; border-radius: 7px; box-sizing: border-box; padding: 5px 9px; overflow: hidden; font-size: clamp(11px, 1.6vh, 17px); line-height: 1.25; box-shadow: 0 2px 5px rgba(0,0,0,0.4); }
   .block .label { font-weight: 800; display: block; }
@@ -48,7 +53,7 @@
 <body>
 <div id="page">
   <div id="topBar">
-    <div id="brand">MOKARA GYMNASTICS<span class="cat" id="catLabel"></span></div>
+    <div id="brand">MOKARA GYMNASTICS</div>
     <div id="dayInfo">
       <div class="day" id="dayLabel">-</div>
       <div class="sub" id="weekLabel">-</div>
@@ -79,15 +84,6 @@
   var COMP_SQUADS = ["16s 20s 23s", "12s", "Pre-Devo", "Pre-Devo = Devo 2", "23/20s", "16s"];
   var WEEKEND_CUTOFF_MIN = 13 * 60 + 30; // 1:30pm — splits Saturday/Sunday into AM/PM sections
   var DAY_LABEL_RE = /^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday AM|Saturday PM|Sunday AM|Sunday PM)$/;
-
-  function getCategory() {
-    var params = new URLSearchParams(window.location.search);
-    var cat = (params.get("cat") || "").trim().toLowerCase();
-    if (cat === "rec") return "Rec";
-    if (cat === "comp") return "Comp";
-    return null;
-  }
-  var CATEGORY = getCategory();
 
   function getNow() {
     var params = new URLSearchParams(window.location.search);
@@ -342,7 +338,7 @@
     rulerEl.innerHTML = "";
 
     if (!squads.length) {
-      rowsEl.innerHTML = '<div id="emptyMsg">No ' + CATEGORY + " classes scheduled right now.</div>";
+      rowsEl.innerHTML = '<div id="emptyMsg">No classes scheduled right now.</div>';
       return;
     }
 
@@ -351,7 +347,7 @@
       sq.sessions.forEach(function (s) { allStarts.push(s.start); allEnds.push(s.end); });
     });
     if (!allStarts.length) {
-      rowsEl.innerHTML = '<div id="emptyMsg">No ' + CATEGORY + " classes scheduled right now.</div>";
+      rowsEl.innerHTML = '<div id="emptyMsg">No classes scheduled right now.</div>';
       return;
     }
     var minT = Math.min.apply(null, allStarts);
@@ -369,12 +365,20 @@
       rulerEl.appendChild(tick);
     }
 
+    var lastCategory = null;
     squads.forEach(function (sq) {
+      if (lastCategory !== null && sq.category !== lastCategory) {
+        var divider = document.createElement("div");
+        divider.className = "groupDivider";
+        rowsEl.appendChild(divider);
+      }
+      lastCategory = sq.category;
+
       var rowEl = document.createElement("div");
       rowEl.className = "squadRow";
       var label = document.createElement("div");
-      label.className = "squadLabel";
-      label.textContent = sq.name;
+      label.className = "squadLabel " + (sq.category === "Comp" ? "cat-comp" : "cat-rec");
+      label.innerHTML = '<span class="sqName">' + sq.name + '</span><span class="sqTag">' + sq.category + '</span>';
       var track = document.createElement("div");
       track.className = "squadTrack";
       sq.sessions.forEach(function (s) {
@@ -400,8 +404,6 @@
   }
 
   function loadAndRender() {
-    if (!CATEGORY) { showError("Needs ?cat=rec or ?cat=comp in the URL."); return; }
-    document.getElementById("catLabel").textContent = CATEGORY;
     var now = getNow();
     var info = computeWeekAndSection(now);
     document.getElementById("dayLabel").textContent = info.sectionLabel;
@@ -421,10 +423,14 @@
         if (!row || !row.values) continue;
         var name = cellText(row.values[0]);
         if (!name) continue;
-        if (categorize(name) !== CATEGORY) continue;
         var sessions = sessionsForSquadRow(sheet.rowData, sheet.merges, r, section.ruler, section.rulerCols, section.maxCols);
-        if (sessions.length) squads.push({ name: name, sessions: sessions });
+        if (sessions.length) squads.push({ name: name, category: categorize(name), sessions: sessions });
       }
+      // Comp squads first, then Rec squads, preserving sheet order within each group.
+      squads.sort(function (a, b) {
+        if (a.category === b.category) return 0;
+        return a.category === "Comp" ? -1 : 1;
+      });
       renderSchedule(squads);
     }).catch(function (err) {
       console.error(err);
