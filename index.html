@@ -41,6 +41,7 @@
   .block { position: absolute; top: 4px; bottom: 4px; border-radius: 7px; box-sizing: border-box; padding: 6px 9px; overflow: hidden; font-size: clamp(12px, 1.7vh, 18px); line-height: 1.25; box-shadow: 0 2px 5px rgba(0,0,0,0.4); }
   .block .label { font-weight: 800; display: block; }
   .block .loc { display: block; opacity: 0.9; font-size: 0.85em; font-weight: 700; margin-top: 1px; }
+  .block .time { display: block; opacity: 0.85; font-size: 0.7em; font-weight: 700; margin-top: 1px; white-space: normal; overflow-wrap: break-word; word-break: keep-all; }
   #emptyMsg, #errorMsg { margin: auto; text-align: center; opacity: 0.85; font-size: clamp(16px, 2.2vh, 26px); padding: 20px; color: var(--teal-light); }
   #legend { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: clamp(10px, 1.4vw, 24px); align-items: center; padding: clamp(8px, 1.2vh, 16px) clamp(20px, 2.4vw, 44px); background: var(--navy-deep); font-size: clamp(11px, 1.3vh, 15px); border-top: 1px solid rgba(255,255,255,0.1); }
   .legendItem { display: flex; align-items: center; gap: 8px; opacity: 0.95; color: var(--teal-light); }
@@ -567,6 +568,7 @@
         block.style.color = fg;
         var html = '<span class="label">' + v.s.label + "</span>";
         if (v.s.location) html += '<span class="loc">' + v.s.location + "</span>";
+        html += '<span class="time">' + formatMinutes(v.s.start) + " - " + formatMinutes(v.s.end) + "</span>";
         block.innerHTML = html;
         item.track.appendChild(block);
       });
