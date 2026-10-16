@@ -575,11 +575,75 @@
     });
   }
 
+  // A single failed fetch (a one-off network blip, or a transient hiccup in however the
+  // display device is loading this page) shouldn't blank an otherwise-working TV — that's
+  // worse than just leaving the previous schedule up for one more refresh cycle. So we only
+  // show the on-screen error after several consecutive failures in a row (a real, ongoing
+  // problem worth surfacing), or on the very first load when there's no prior schedule to
+  // fall back to. Every other time, we just log it and quietly retry next tick.
+  var FAILURE_THRESHOLD = 3;
+  var hasRenderedOnce = false;
+  var consecutiveFailures = 0;
+
+  // The big day/time clock used a fixed vh-based size, which looked fine on a short label like
+  // "Friday" but actually overflowed off the right edge of the screen (pushing the WEEK badge
+  // out of view) on the longest real label, "Saturday PM", once the hour reaches a 2-digit
+  // value (e.g. "12:59:59 PM") — that combination was never tested against before. This instead
+  // sizes the clock dynamically: the biggest font that still leaves both side labels (brand,
+  // week badge) fully visible with a safety margin, given whatever day label is actually
+  // showing. Most days it renders noticeably bigger than the old fixed size; on "Saturday PM"
+  // it backs off just enough to guarantee nothing is ever pushed off-screen.
+  function fitHeaderClock() {
+    var dayEl = document.getElementById("dayLabel");
+    var clockEl = document.getElementById("clockTime");
+    var brandEl = document.getElementById("brand");
+    var weekEl = document.getElementById("weekLabel");
+    var topBarEl = document.getElementById("topBar");
+    var headerCenterEl = document.getElementById("headerCenter");
+
+    var topBarStyle = getComputedStyle(topBarEl);
+    var paddingX = parseFloat(topBarStyle.paddingLeft) + parseFloat(topBarStyle.paddingRight);
+    var columnGap = parseFloat(topBarStyle.columnGap || topBarStyle.gap) || 0;
+    var SAFETY_MARGIN = 40; // px of guaranteed breathing room, so text never sits flush against its neighbor
+
+    // Reserve the widest possible clock string (a 2-digit hour) while measuring, so whatever
+    // size we land on stays valid for the whole day, not just the instant we happen to fit it.
+    var realClockText = clockEl.textContent;
+    clockEl.textContent = "12:59:59 PM";
+
+    var min = 40, max = 220;
+    for (var i = 0; i < 11; i++) {
+      var mid = (min + max) / 2;
+      dayEl.style.fontSize = mid + "px";
+      clockEl.style.fontSize = mid + "px";
+      var used = brandEl.getBoundingClientRect().width + headerCenterEl.getBoundingClientRect().width + weekEl.getBoundingClientRect().width + columnGap * 2;
+      var avail = topBarEl.clientWidth - paddingX;
+      if (used + SAFETY_MARGIN <= avail) { min = mid; } else { max = mid; }
+    }
+    dayEl.style.fontSize = min + "px";
+    clockEl.style.fontSize = min + "px";
+    clockEl.textContent = realClockText;
+  }
+
+  // The TV is read from across a room, where "FRIDAY" vs. "MON" makes no real difference to
+  // legibility — but the full weekday name (especially "Saturday"/"Sunday" with their AM/PM
+  // suffix) was the single biggest thing eating into the clock's available width in
+  // fitHeaderClock above. Three-letter day codes free that space up for a noticeably bigger
+  // clock on every single day, not just the short-named ones. This only changes what's
+  // DISPLAYED — info.sectionLabel itself (the full name) is still what's used below to match
+  // the day section against the sheet's own day headers, completely untouched.
+  function abbreviateDayLabel(sectionLabel) {
+    var m = sectionLabel.match(/^(\w+)(\s(AM|PM))?$/);
+    if (!m) return sectionLabel;
+    return m[1].slice(0, 3) + (m[2] || "");
+  }
+
   function loadAndRender() {
     var now = getNow();
     var info = computeWeekAndSection(now);
-    document.getElementById("dayLabel").textContent = info.sectionLabel;
+    document.getElementById("dayLabel").textContent = abbreviateDayLabel(info.sectionLabel);
     document.getElementById("weekLabel").textContent = "Week " + info.weekNumber;
+    fitHeaderClock();
 
     Promise.all([fetchGrids([info.tabName]), fetchLegend()]).then(function (results) {
       var grids = results[0];
@@ -588,7 +652,7 @@
       var sheet = grids[info.tabName];
       if (!sheet) throw new Error("Could not read tab '" + info.tabName + "'.");
       var section = extractDaySection(sheet.rowData, sheet.merges, info.sectionLabel);
-      if (!section) { renderSchedule([]); return; }
+      if (!section) { renderSchedule([]); hasRenderedOnce = true; consecutiveFailures = 0; return; }
       var squads = [];
       for (var r = section.squadStart; r < section.squadEnd; r++) {
         var row = sheet.rowData[r];
@@ -604,9 +668,15 @@
         return a.category === "Comp" ? -1 : 1;
       });
       renderSchedule(squads);
+      hasRenderedOnce = true;
+      consecutiveFailures = 0;
     }).catch(function (err) {
       console.error(err);
-      showError("Schedule data unavailable right now — it'll retry automatically.<br>" + (err && err.message ? err.message : ""));
+      consecutiveFailures++;
+      if (!hasRenderedOnce || consecutiveFailures >= FAILURE_THRESHOLD) {
+        showError("Schedule data unavailable right now — it'll retry automatically.<br>" + (err && err.message ? err.message : ""));
+      }
+      // else: keep whatever's already on screen and just try again next tick.
     });
   }
 
