@@ -475,6 +475,23 @@
   // colored box a viewer sees always actually contains its own label.
   var MIN_BLOCK_PX = 110;
 
+  // A block's label/location/time can run long enough, at the fixed clamp() font size, to
+  // wrap past the block's own height — and since the block clips overflow, the time line
+  // (last in the stack) is what silently disappears off the bottom. Shrinking that one
+  // block's font just enough to make everything fit keeps every time range fully readable
+  // without touching the rest of the row's sizing.
+  var BLOCK_FONT_MIN = 7, BLOCK_FONT_MAX = 18;
+  function fitBlockText(el) {
+    var min = BLOCK_FONT_MIN, max = BLOCK_FONT_MAX;
+    for (var i = 0; i < 9; i++) {
+      var mid = (min + max) / 2;
+      el.style.fontSize = mid + "px";
+      var fits = el.scrollWidth <= el.clientWidth && el.scrollHeight <= el.clientHeight;
+      if (fits) { min = mid; } else { max = mid; }
+    }
+    el.style.fontSize = min + "px";
+  }
+
   function renderSchedule(squads) {
     var rowsEl = document.getElementById("rows");
     var rulerEl = document.getElementById("ruler");
@@ -571,6 +588,7 @@
         html += '<span class="time">' + formatMinutes(v.s.start) + " - " + formatMinutes(v.s.end) + "</span>";
         block.innerHTML = html;
         item.track.appendChild(block);
+        fitBlockText(block);
       });
     });
   }
