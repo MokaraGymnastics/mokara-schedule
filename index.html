@@ -22,7 +22,9 @@
   #headerCenter { justify-self: center; display: flex; align-items: baseline; gap: clamp(14px, 2vw, 30px); }
   #dayLabel { font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; font-size: clamp(60px, 9.5vh, 118px); color: var(--teal-bright); white-space: nowrap; }
   #clockTime { font-weight: 800; letter-spacing: 1px; font-variant-numeric: tabular-nums; font-size: clamp(60px, 9.5vh, 118px); color: var(--cream); white-space: nowrap; }
-  #weekLabel { justify-self: end; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; font-size: clamp(18px, 2.6vh, 28px); color: var(--cream); white-space: nowrap; }
+  #weekCol { justify-self: end; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  #weekLabel { font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; font-size: clamp(18px, 2.6vh, 28px); color: var(--cream); white-space: nowrap; }
+  #lessonPlanLabel { font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; font-size: clamp(13px, 1.7vh, 19px); color: var(--cream); opacity: 0.72; white-space: nowrap; display: none; }
   #body { flex: 1 1 auto; display: flex; min-height: 0; }
   #gridArea { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; padding: clamp(12px, 1.8vh, 26px) clamp(16px, 2vw, 34px); overflow: hidden; }
   #ruler { display: flex; flex: 0 0 auto; height: clamp(34px, 4.2vh, 56px); margin-left: var(--label-width, 210px); position: relative; border-bottom: 2px solid rgba(255,255,255,0.18); margin-bottom: 6px; }
@@ -56,7 +58,10 @@
       <div id="dayLabel">-</div>
       <div id="clockTime">--:--</div>
     </div>
-    <div id="weekLabel">-</div>
+    <div id="weekCol">
+      <div id="weekLabel">-</div>
+      <div id="lessonPlanLabel"></div>
+    </div>
   </div>
   <div id="body">
     <div id="gridArea">
@@ -82,6 +87,21 @@
   // single real-world confirmation from the coaches, not a guess.
   var WEEK_OVERRIDES = {
     "2026-10-05": { tabName: "C - WK 3-6-9", weekNumber: 3 } // Deepa corrected Oct 5 week to "Week 3" (was first told Week 4 earlier the same day) — 2026-10-05
+  };
+  // Which "Lesson Plan" (the coaches' separate 9-week curriculum block number, distinct from
+  // the WK1-9/tab-ABC cycle above) applies to a given calendar week. This does NOT follow a
+  // fixed formula — the coaches confirmed the normal 1->2->3->1->2->3... rotation was broken
+  // once (a Lesson Plan 4 was inserted between a Plan 3 and a Plan 2 block), so this is a
+  // plain lookup of real-world confirmations, keyed by that week's Monday (YYYY-MM-DD), in the
+  // same spirit as WEEK_OVERRIDES above. A week with no entry here just shows no Lesson Plan
+  // badge rather than guessing — add a new row as soon as the next block is confirmed (e.g.
+  // Deepa says "committed" after updating the whiteboard), don't extrapolate ahead of it.
+  var LESSON_PLAN_BY_WEEK = {
+    "2026-10-19": 3, "2026-10-26": 3, "2026-11-02": 3, // Lesson Plan 3 (WK7,8,9)
+    "2026-11-09": 4, "2026-11-16": 4, "2026-11-23": 4, // Lesson Plan 4 (WK1,2,3) — one-off, replaces what would normally have been Plan 1
+    "2026-11-30": 2, "2026-12-07": 2, "2026-12-14": 2, // Lesson Plan 2 (WK4,5,6)
+    "2026-12-21": 3, "2026-12-28": 3, "2027-01-04": 3, // Lesson Plan 3 again (WK7,8,9) — confirmed by Deepa 2026-11-11, normal rotation resumes
+    "2027-01-11": 1, "2027-01-18": 1, "2027-01-25": 1  // Lesson Plan 1 (WK1,2,3) — confirmed by Deepa 2026-11-11, back to the normal 1->2->3 cycle
   };
   // Squads NOT in this list are treated as Rec (named/individual squads). Update here if the coaches add new Comp squads.
   var COMP_SQUADS = ["16s 20s 23s", "12s", "12s 16s", "Pre-Devo", "Pre-Devo = Devo 2", "23/20s", "16s", "PRIME"];
@@ -174,7 +194,8 @@
     if (weekday === "Saturday" || weekday === "Sunday") {
       sectionLabel = weekday + (minutesOfDay < WEEKEND_CUTOFF_MIN ? " AM" : " PM");
     }
-    return { weekNumber: weekNumber, tabName: tabName, sectionLabel: sectionLabel, weekday: weekday };
+    var lessonPlan = LESSON_PLAN_BY_WEEK[mondayKey] || null;
+    return { weekNumber: weekNumber, tabName: tabName, sectionLabel: sectionLabel, weekday: weekday, lessonPlan: lessonPlan };
   }
 
   function sheetsApiUrl(ranges, fields) {
@@ -319,9 +340,19 @@
   // "Break" is forced black, and anything else falls back to whatever color the coach set
   // on that cell in the sheet.
   function resolveBlockColor(label, rawBg) {
-    var code = (label || "").trim().toUpperCase();
+    var trimmed = (label || "").trim();
+    var code = trimmed.toUpperCase();
     if (CODE_COLORS[code]) return CODE_COLORS[code];
-    var lc = (label || "").toLowerCase();
+    // Rec-squad labels often lead with the short activity code followed by more descriptive
+    // text (e.g. "WU Floor 2", "BB Rec BB", "VT Rec VT A/B + Rec TT") rather than being just
+    // the bare code on its own. Without this, "WU Floor 2" fell all the way through to the
+    // "floor" keyword check below and got colored as Floor Exercise instead of Warm Up, and
+    // "BB Rec BB"/"VT Rec VT A/B..." matched nothing at all and fell back to whatever raw
+    // color happened to be set on that sheet cell — both silently wrong, not a sheet problem.
+    // Matching the leading word against the same CODE_COLORS map first fixes both cases.
+    var leadMatch = trimmed.match(/^([A-Za-z]+)\b/);
+    if (leadMatch && CODE_COLORS[leadMatch[1].toUpperCase()]) return CODE_COLORS[leadMatch[1].toUpperCase()];
+    var lc = trimmed.toLowerCase();
     if (lc.indexOf("break") !== -1) return BREAK_COLOR;
     if (lc.indexOf("warm up") !== -1) return CODE_COLORS.WU;
     if (lc.indexOf("vault") !== -1) return CODE_COLORS.VT;
@@ -615,7 +646,7 @@
     var dayEl = document.getElementById("dayLabel");
     var clockEl = document.getElementById("clockTime");
     var brandEl = document.getElementById("brand");
-    var weekEl = document.getElementById("weekLabel");
+    var weekEl = document.getElementById("weekCol"); // measure the whole week+lesson-plan column, not just the week text
     var topBarEl = document.getElementById("topBar");
     var headerCenterEl = document.getElementById("headerCenter");
 
@@ -661,6 +692,14 @@
     var info = computeWeekAndSection(now);
     document.getElementById("dayLabel").textContent = abbreviateDayLabel(info.sectionLabel);
     document.getElementById("weekLabel").textContent = "Week " + info.weekNumber;
+    var lessonPlanEl = document.getElementById("lessonPlanLabel");
+    if (info.lessonPlan) {
+      lessonPlanEl.textContent = "Lesson Plan " + info.lessonPlan;
+      lessonPlanEl.style.display = "block";
+    } else {
+      lessonPlanEl.style.display = "none";
+      lessonPlanEl.textContent = "";
+    }
     fitHeaderClock();
 
     Promise.all([fetchGrids([info.tabName]), fetchLegend()]).then(function (results) {
