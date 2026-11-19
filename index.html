@@ -39,7 +39,14 @@
   .squadLabel.cat-rec { color: var(--yellow); }
   .squadLabel.cat-rec .sqTag { color: var(--yellow); }
   .groupDivider { flex: 0 0 auto; height: 1px; background: rgba(255,255,255,0.12); margin: 2px 0 2px var(--label-width, 210px); }
-  .squadTrack { position: relative; flex: 1 1 auto; background: rgba(255,255,255,0.05); border-radius: 8px; }
+  /* squadTrackWrap stacks an optional classTagRow (the "Little Sprouts 1" / "Growing Sprouts 2"
+     style banner the coaches write directly above a squad's row in the sheet) on top of that
+     squad's own squadTrack. Rows with no banner above them in the sheet get no classTagRow at
+     all, so they're unaffected and keep their full track height exactly as before. */
+  .squadTrackWrap { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  .classTagRow { position: relative; flex: 0 0 auto; height: clamp(14px, 2.2vh, 22px); margin-bottom: 3px; }
+  .classTag { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.28); border-radius: 5px; box-sizing: border-box; font-size: clamp(9px, 1.15vh, 13px); font-weight: 800; letter-spacing: 0.4px; text-transform: uppercase; color: #fff; overflow: hidden; white-space: nowrap; padding: 0 4px; }
+  .squadTrack { position: relative; flex: 1 1 auto; min-height: 0; background: rgba(255,255,255,0.05); border-radius: 8px; }
   .block { position: absolute; top: 4px; bottom: 4px; border-radius: 7px; box-sizing: border-box; padding: 6px 9px; overflow: hidden; font-size: clamp(12px, 1.7vh, 18px); line-height: 1.25; box-shadow: 0 2px 5px rgba(0,0,0,0.4); }
   .block .label { font-weight: 800; display: block; }
   .block .loc { display: block; opacity: 0.9; font-size: 0.85em; font-weight: 700; margin-top: 1px; }
@@ -433,7 +440,7 @@
             if (!parsed.location && prevParsed) {
               parsed = { label: prevParsed.label, location: parsed.label };
             }
-            sessions.push({ label: parsed.label, location: parsed.location, start: seg.start, end: seg.end, bg: bg });
+            sessions.push({ label: parsed.label, location: parsed.location, start: seg.start, end: seg.end, bg: bg, srcCol: srcCol });
             prevParsed = parsed;
           });
         } else {
@@ -441,13 +448,42 @@
           var endMin = ruler[endCol] !== undefined ? ruler[endCol] : (startMin !== null ? startMin + 15 * (endCol - col) : null);
           if (startMin !== null && endMin !== null && endMin > startMin) {
             var parsed2 = parseActivityText(text);
-            sessions.push({ label: parsed2.label, location: parsed2.location, start: startMin, end: endMin, bg: bg });
+            sessions.push({ label: parsed2.label, location: parsed2.location, start: startMin, end: endMin, bg: bg, srcCol: srcCol });
           }
         }
       }
       col = endCol;
     }
     return sessions;
+  }
+
+  // A REC squad's own row can have a "class name" banner (e.g. "Little Sprouts 1", "Growing
+  // Sprouts 2") typed directly into the row immediately above it in the sheet, as one merged
+  // cell per rotation — spanning the exact same columns as that rotation's WU/TR/UB/FX blocks
+  // below it. This reads that banner row the same way a squad row is read (walk the merges left
+  // to right), but keeps only each segment's column span and text — no time parsing needed,
+  // since matching happens by column against the squad row's own session.srcCol (see
+  // loadAndRender), not by time. That sidesteps the known column↔printed-time drift (a
+  // session's real time comes from its own cell text, not the ruler column — see
+  // parseEmbeddedSegments above), which would otherwise make time-based matching unreliable.
+  function bannerSegmentsForRow(rowData, merges, rowIdx) {
+    var row = rowData[rowIdx];
+    if (!row || !row.values) return [];
+    var segs = [];
+    var col = 0;
+    var maxCol = row.values.length;
+    while (col < maxCol) {
+      var merge = findMerge(merges, rowIdx, col);
+      var srcRow = merge ? merge.startRowIndex : rowIdx;
+      var srcCol = merge ? merge.startColumnIndex : col;
+      var endCol = merge ? merge.endColumnIndex : col + 1;
+      if (srcRow === rowIdx) {
+        var text = cellText(row.values[srcCol]);
+        if (text) segs.push({ startCol: srcCol, endCol: endCol, label: text });
+      }
+      col = endCol;
+    }
+    return segs;
   }
 
   function formatMinutes(mins) {
@@ -566,12 +602,27 @@
       var label = document.createElement("div");
       label.className = "squadLabel " + (sq.category === "Comp" ? "cat-comp" : "cat-rec");
       label.innerHTML = '<span class="sqName">' + sq.name + '</span><span class="sqTag">' + sq.category + '</span>';
+
+      var trackWrap = document.createElement("div");
+      trackWrap.className = "squadTrackWrap";
+      // Only squads that actually have a class-name banner above them in the sheet (see
+      // bannerSegmentsForRow / loadAndRender) get the extra classTagRow strip — every other
+      // row keeps the exact same full-height track it always had.
+      var hasTags = sq.sessions.some(function (s) { return !!s.classTag; });
+      var tagRow = null;
+      if (hasTags) {
+        tagRow = document.createElement("div");
+        tagRow.className = "classTagRow";
+        trackWrap.appendChild(tagRow);
+      }
       var track = document.createElement("div");
       track.className = "squadTrack";
+      trackWrap.appendChild(track);
+
       rowEl.appendChild(label);
-      rowEl.appendChild(track);
+      rowEl.appendChild(trackWrap);
       rowsEl.appendChild(rowEl);
-      rowItems.push({ sq: sq, track: track });
+      rowItems.push({ sq: sq, track: track, tagRow: tagRow });
     });
 
     rowItems.forEach(function (item) {
@@ -601,6 +652,30 @@
         item.track.appendChild(block);
         fitBlockText(block);
       });
+
+      // Render each run of consecutive same-tag sessions as one pill spanning their combined
+      // time range, mirroring the single merged banner cell that covers that same rotation in
+      // the sheet — rather than repeating the tag on every individual WU/TR/UB/FX block.
+      if (item.tagRow) {
+        var sessions = item.sq.sessions;
+        var i = 0;
+        while (i < sessions.length) {
+          var tag = sessions[i].classTag;
+          if (!tag) { i++; continue; }
+          var j = i;
+          while (j + 1 < sessions.length && sessions[j + 1].classTag === tag) j++;
+          var groupStart = sessions[i].start, groupEnd = sessions[j].end;
+          var tagLeft = ((groupStart - minT) / span) * 100;
+          var tagWidth = ((groupEnd - groupStart) / span) * 100;
+          var tagEl = document.createElement("div");
+          tagEl.className = "classTag";
+          tagEl.style.left = tagLeft + "%";
+          tagEl.style.width = Math.max(tagWidth, 0.3) + "%";
+          tagEl.textContent = tag;
+          item.tagRow.appendChild(tagEl);
+          i = j + 1;
+        }
+      }
     });
   }
 
@@ -691,12 +766,30 @@
       var section = extractDaySection(sheet.rowData, sheet.merges, info.sectionLabel);
       if (!section) { renderSchedule([]); hasRenderedOnce = true; consecutiveFailures = 0; return; }
       var squads = [];
+      var rulerRowIdx = section.squadStart - 1;
       for (var r = section.squadStart; r < section.squadEnd; r++) {
         var row = sheet.rowData[r];
         if (!row || !row.values) continue;
         var name = cellText(row.values[0]);
         if (!name) continue;
         var sessions = sessionsForSquadRow(sheet.rowData, sheet.merges, r, section.ruler, section.rulerCols, section.maxCols, section.isAMSection);
+        // If the sheet row directly above this squad's row has no squad name of its own, it's
+        // a candidate "class name" banner row (see bannerSegmentsForRow) rather than another
+        // squad — tag each of this squad's sessions with whichever banner segment covers its
+        // column. Excludes the ruler row itself (the first squad row's "row above" is the ruler,
+        // never a banner).
+        if (r - 1 !== rulerRowIdx) {
+          var aboveRow = sheet.rowData[r - 1];
+          if (aboveRow && aboveRow.values && !cellText(aboveRow.values[0])) {
+            var bannerSegs = bannerSegmentsForRow(sheet.rowData, sheet.merges, r - 1);
+            if (bannerSegs.length) {
+              sessions.forEach(function (s) {
+                var seg = bannerSegs.filter(function (b) { return s.srcCol >= b.startCol && s.srcCol < b.endCol; })[0];
+                if (seg) s.classTag = seg.label;
+              });
+            }
+          }
+        }
         if (sessions.length) squads.push({ name: name, category: categorize(name), sessions: sessions });
       }
       // Comp squads first, then Rec squads, preserving sheet order within each group.
