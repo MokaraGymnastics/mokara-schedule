@@ -17,7 +17,7 @@
   }
   html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--navy-deep); overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--cream); }
   #page { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--navy-deep); }
-  #topBar { flex: 0 0 auto; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; column-gap: clamp(16px, 2.4vw, 40px); padding: clamp(12px, 1.8vh, 26px) clamp(20px, 2.4vw, 44px); background: var(--navy); box-shadow: 0 3px 14px rgba(0,0,0,0.35); border-bottom: 3px solid var(--yellow); }
+  #topBar { flex: 0 0 auto; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; column-gap: clamp(16px, 2.4vw, 40px); padding: clamp(8px, 1.1vh, 16px) clamp(18px, 2.2vw, 38px); background: var(--navy); box-shadow: 0 3px 14px rgba(0,0,0,0.35); border-bottom: 3px solid var(--yellow); }
   #brand { justify-self: start; font-weight: 800; letter-spacing: 2px; font-size: clamp(18px, 2.6vh, 28px); color: var(--cream); white-space: nowrap; }
   #headerCenter { justify-self: center; display: flex; align-items: baseline; gap: clamp(14px, 2vw, 30px); }
   #dayLabel { font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; font-size: clamp(60px, 9.5vh, 118px); color: var(--teal-bright); white-space: nowrap; }
@@ -26,11 +26,11 @@
   #weekLabel { font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; font-size: clamp(18px, 2.6vh, 28px); color: var(--cream); white-space: nowrap; }
   #lessonPlanLabel { font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; font-size: clamp(13px, 1.7vh, 19px); color: var(--cream); opacity: 0.72; white-space: nowrap; display: none; }
   #body { flex: 1 1 auto; display: flex; min-height: 0; }
-  #gridArea { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; padding: clamp(12px, 1.8vh, 26px) clamp(16px, 2vw, 34px); overflow: hidden; }
-  #ruler { display: flex; flex: 0 0 auto; height: clamp(34px, 4.2vh, 56px); margin-left: var(--label-width, 210px); position: relative; border-bottom: 2px solid rgba(255,255,255,0.18); margin-bottom: 6px; }
+  #gridArea { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; padding: clamp(8px, 1.1vh, 16px) clamp(14px, 1.8vw, 28px); overflow: hidden; }
+  #ruler { display: flex; flex: 0 0 auto; height: clamp(26px, 3.2vh, 42px); margin-left: var(--label-width, 210px); position: relative; border-bottom: 2px solid rgba(255,255,255,0.18); margin-bottom: 4px; }
   .rulerTick { position: absolute; top: 0; bottom: 0; display: flex; align-items: flex-end; font-size: clamp(15px, 1.9vh, 22px); color: var(--teal-light); opacity: 0.8; border-left: 1px solid rgba(255,255,255,0.14); padding-left: 5px; font-weight: 600; }
   .rulerTick.major { color: var(--cream); opacity: 1; font-weight: 800; border-left-color: rgba(255,255,255,0.35); }
-  #rows { flex: 1 1 auto; display: flex; flex-direction: column; gap: clamp(6px, 1vh, 12px); overflow-y: auto; min-height: 0; }
+  #rows { flex: 1 1 auto; display: flex; flex-direction: column; gap: clamp(4px, 0.7vh, 9px); overflow-y: auto; min-height: 0; }
   .squadRow { flex: 1 1 0; display: flex; align-items: stretch; min-height: 0; }
   .squadLabel { flex: 0 0 var(--label-width, 210px); width: var(--label-width, 210px); display: flex; flex-direction: column; align-items: flex-start; justify-content: center; font-weight: 800; font-size: clamp(19px, 2.6vh, 30px); padding-right: 12px; color: var(--teal-bright); }
   .squadLabel .sqTag { font-size: 0.56em; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; opacity: 0.85; margin-top: 2px; }
@@ -52,7 +52,7 @@
   .block .loc { display: block; opacity: 0.9; font-size: 0.85em; font-weight: 700; margin-top: 1px; }
   .block .time { display: block; opacity: 0.85; font-size: 0.7em; font-weight: 700; margin-top: 1px; white-space: normal; overflow-wrap: break-word; word-break: keep-all; }
   #emptyMsg, #errorMsg { margin: auto; text-align: center; opacity: 0.85; font-size: clamp(16px, 2.2vh, 26px); padding: 20px; color: var(--teal-light); }
-  #legend { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: clamp(10px, 1.4vw, 24px); align-items: center; padding: clamp(8px, 1.2vh, 16px) clamp(20px, 2.4vw, 44px); background: var(--navy-deep); font-size: clamp(11px, 1.3vh, 15px); border-top: 1px solid rgba(255,255,255,0.1); }
+  #legend { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: clamp(10px, 1.4vw, 24px); align-items: center; padding: clamp(5px, 0.8vh, 11px) clamp(18px, 2.2vw, 38px); background: var(--navy-deep); font-size: clamp(11px, 1.3vh, 15px); border-top: 1px solid rgba(255,255,255,0.1); }
   .legendItem { display: flex; align-items: center; gap: 8px; opacity: 0.95; color: var(--teal-light); }
   .legendSwatch { display: inline-flex; align-items: center; justify-content: center; padding: 3px 9px; border-radius: 6px; font-weight: 800; letter-spacing: 0.5px; }
 </style>
@@ -540,7 +540,11 @@
   // (last in the stack) is what silently disappears off the bottom. Shrinking that one
   // block's font just enough to make everything fit keeps every time range fully readable
   // without touching the rest of the row's sizing.
-  var BLOCK_FONT_MIN = 7, BLOCK_FONT_MAX = 18;
+  // Raised from 18 to 24 (2026-11-19, Deepa: blocks still look small) now that the row-height
+  // and chrome-padding changes above free up more real estate — fitBlockText still always
+  // shrinks-to-fit per block first, so no block's text can be cut off; this just raises the
+  // ceiling so a block with room to spare renders noticeably bigger than before.
+  var BLOCK_FONT_MIN = 7, BLOCK_FONT_MAX = 24;
   function fitBlockText(el) {
     var min = BLOCK_FONT_MIN, max = BLOCK_FONT_MAX;
     for (var i = 0; i < 9; i++) {
@@ -771,11 +775,14 @@
     var realClockText = clockEl.textContent;
     clockEl.textContent = "12:59:59 PM";
 
-    // Deepa asked (2026-11-19) to size the clock down a notch from whatever this fit would
-    // otherwise max out at, to free up vertical room in #topBar for the schedule grid below —
-    // the cap was 220 before; a smaller cap here directly shrinks #topBar's height too, since
-    // it's flex:0 0 auto (sized to its content, not a fixed height).
-    var min = 40, max = 150;
+    // Deepa asked (2026-11-19) to size the clock down, then again the same day to go smaller
+    // still, to free up more vertical room in #topBar for the schedule grid below — the cap
+    // was 220 originally, then 150, then 100 (which barely changed anything — see below), now
+    // 78. This cap is a hard ceiling, not just a fallback: on a wide screen the width-based fit
+    // alone lands around 100-102px, well above a cap of 100, so that first drop to 100 made
+    // almost no visible difference. 78 is comfortably below that width-based fit, so it's what
+    // actually governs the size now and reliably shrinks the clock.
+    var min = 30, max = 78;
     for (var i = 0; i < 11; i++) {
       var mid = (min + max) / 2;
       dayEl.style.fontSize = mid + "px";
