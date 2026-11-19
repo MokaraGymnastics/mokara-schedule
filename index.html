@@ -44,8 +44,8 @@
      squad's own squadTrack. Rows with no banner above them in the sheet get no classTagRow at
      all, so they're unaffected and keep their full track height exactly as before. */
   .squadTrackWrap { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
-  .classTagRow { position: relative; flex: 0 0 auto; height: clamp(14px, 2.2vh, 22px); margin-bottom: 3px; }
-  .classTag { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.28); border-radius: 5px; box-sizing: border-box; font-size: clamp(9px, 1.15vh, 13px); font-weight: 800; letter-spacing: 0.4px; text-transform: uppercase; color: #fff; overflow: hidden; white-space: nowrap; padding: 0 4px; }
+  .classTagRow { position: relative; flex: 0 0 auto; height: clamp(11px, 1.5vh, 15px); margin-bottom: 2px; }
+  .classTag { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.28); border-radius: 5px; box-sizing: border-box; font-size: clamp(7.5px, 0.95vh, 10.5px); font-weight: 800; letter-spacing: 0.3px; text-transform: uppercase; color: #fff; overflow: hidden; white-space: nowrap; padding: 0 3px; }
   .squadTrack { position: relative; flex: 1 1 auto; min-height: 0; background: rgba(255,255,255,0.05); border-radius: 8px; }
   .block { position: absolute; top: 4px; bottom: 4px; border-radius: 7px; box-sizing: border-box; padding: 6px 9px; overflow: hidden; font-size: clamp(12px, 1.7vh, 18px); line-height: 1.25; box-shadow: 0 2px 5px rgba(0,0,0,0.4); }
   .block .label { font-weight: 800; display: block; }
@@ -622,7 +622,7 @@
       rowEl.appendChild(label);
       rowEl.appendChild(trackWrap);
       rowsEl.appendChild(rowEl);
-      rowItems.push({ sq: sq, track: track, tagRow: tagRow });
+      rowItems.push({ sq: sq, rowEl: rowEl, track: track, tagRow: tagRow });
     });
 
     rowItems.forEach(function (item) {
@@ -677,6 +677,43 @@
         }
       }
     });
+
+    // Every squadRow shares equal height via flex:1 1 0 by default, so a row that grew a
+    // classTagRow strip above its track has that much LESS room left for the track itself —
+    // its blocks end up visibly shorter than every other row's, which is exactly what made
+    // some blocks' text (even the time, in one case) clip off entirely once this feature
+    // shipped. Fix: measure the actual rendered strip height, then re-solve each row's total
+    // height so every row's TRACK portion ends up the same — the handful of rows with a strip
+    // "pay" for it with a few extra px pulled evenly from every row's share, not from their
+    // own track alone. Done as a post-layout pass (not pre-computed) so it stays correct
+    // against the real clamp()-based, viewport-dependent sizes rather than an assumed px value.
+    var taggedItems = rowItems.filter(function (it) { return !!it.tagRow; });
+    if (taggedItems.length) {
+      var rowsRect = rowsEl.getBoundingClientRect();
+      var gapPx = parseFloat(getComputedStyle(rowsEl).rowGap) || 0;
+      var dividerEls = rowsEl.querySelectorAll(".groupDivider");
+      var dividerPx = 0;
+      dividerEls.forEach(function (d) {
+        var cs = getComputedStyle(d);
+        dividerPx += d.getBoundingClientRect().height + parseFloat(cs.marginTop || 0) + parseFloat(cs.marginBottom || 0);
+      });
+      var totalChildren = rowItems.length + dividerEls.length;
+      var gapsTotal = gapPx * Math.max(totalChildren - 1, 0);
+      var sampleTagRow = taggedItems[0].tagRow;
+      var sampleCs = getComputedStyle(sampleTagRow);
+      var tagStripH = sampleTagRow.getBoundingClientRect().height + parseFloat(sampleCs.marginTop || 0) + parseFloat(sampleCs.marginBottom || 0);
+      var availableForTracks = rowsRect.height - gapsTotal - dividerPx - taggedItems.length * tagStripH;
+      var trackH = availableForTracks / rowItems.length;
+      // Sanity guard: only apply if this leaves a sane, positive track height — if the math
+      // comes out degenerate (e.g. an unusually short viewport), just leave the default equal
+      // flex:1 1 0 in place rather than risk shrinking every row to near-nothing.
+      if (trackH > 24) {
+        rowItems.forEach(function (it) {
+          var totalPx = trackH + (it.tagRow ? tagStripH : 0);
+          it.rowEl.style.flex = "1 1 " + totalPx + "px";
+        });
+      }
+    }
   }
 
   // A single failed fetch (a one-off network blip, or a transient hiccup in however the
