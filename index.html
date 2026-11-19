@@ -17,7 +17,7 @@
   }
   html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--navy-deep); overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--cream); }
   #page { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--navy-deep); }
-  #topBar { flex: 0 0 auto; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; column-gap: clamp(16px, 2.4vw, 40px); padding: clamp(20px, 3vh, 40px) clamp(20px, 2.4vw, 44px); background: var(--navy); box-shadow: 0 3px 14px rgba(0,0,0,0.35); border-bottom: 3px solid var(--yellow); }
+  #topBar { flex: 0 0 auto; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; column-gap: clamp(16px, 2.4vw, 40px); padding: clamp(12px, 1.8vh, 26px) clamp(20px, 2.4vw, 44px); background: var(--navy); box-shadow: 0 3px 14px rgba(0,0,0,0.35); border-bottom: 3px solid var(--yellow); }
   #brand { justify-self: start; font-weight: 800; letter-spacing: 2px; font-size: clamp(18px, 2.6vh, 28px); color: var(--cream); white-space: nowrap; }
   #headerCenter { justify-self: center; display: flex; align-items: baseline; gap: clamp(14px, 2vw, 30px); }
   #dayLabel { font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; font-size: clamp(60px, 9.5vh, 118px); color: var(--teal-bright); white-space: nowrap; }
@@ -625,6 +625,55 @@
       rowItems.push({ sq: sq, rowEl: rowEl, track: track, tagRow: tagRow });
     });
 
+    // Two independent reasons a row might need a different share of #rows' total height than a
+    // plain equal split would give it:
+    //   1) A row with a classTagRow strip above its track needs that strip's own height on top
+    //      of a normal track, or its blocks end up shorter than every other row's — this is
+    //      what made some blocks' text (even the time, in one case) clip off entirely when the
+    //      class-tag banner feature first shipped.
+    //   2) Deepa asked (2026-11-19) to size Comp rows down and Rec rows up — Comp blocks now
+    //      show only location + time, never the apparatus-name line (see dropLabel below), so
+    //      they need less height to stay readable, and that freed room goes to the Rec rows,
+    //      which are the ones most often stuck with narrow, text-heavy blocks.
+    // Solved together as one weighted split: each row gets weight*baseUnit + its own fixed
+    // addon (the tag-strip height, if it has one), where baseUnit is solved so all rows' total
+    // heights sum to exactly the space #rows has available. This MUST run before any block is
+    // built below — fitBlockText() measures each block's actual rendered box to pick its font
+    // size, so the row heights have to be finalized first, or a comp row that's about to get
+    // shrunk ends up with text already fitted (and now overflowing) its old, taller box.
+    var COMP_ROW_WEIGHT = 0.8, REC_ROW_WEIGHT = 1.25;
+    var rowsRect = rowsEl.getBoundingClientRect();
+    var gapPx = parseFloat(getComputedStyle(rowsEl).rowGap) || 0;
+    var dividerEls = rowsEl.querySelectorAll(".groupDivider");
+    var dividerPx = 0;
+    dividerEls.forEach(function (d) {
+      var cs = getComputedStyle(d);
+      dividerPx += d.getBoundingClientRect().height + parseFloat(cs.marginTop || 0) + parseFloat(cs.marginBottom || 0);
+    });
+    var totalChildren = rowItems.length + dividerEls.length;
+    var gapsTotal = gapPx * Math.max(totalChildren - 1, 0);
+    var taggedItems = rowItems.filter(function (it) { return !!it.tagRow; });
+    var tagStripH = 0;
+    if (taggedItems.length) {
+      var sampleCs = getComputedStyle(taggedItems[0].tagRow);
+      tagStripH = taggedItems[0].tagRow.getBoundingClientRect().height + parseFloat(sampleCs.marginTop || 0) + parseFloat(sampleCs.marginBottom || 0);
+    }
+    var totalWeight = rowItems.reduce(function (sum, it) {
+      return sum + (it.sq.category === "Comp" ? COMP_ROW_WEIGHT : REC_ROW_WEIGHT);
+    }, 0);
+    var availableForWeighted = rowsRect.height - gapsTotal - dividerPx - taggedItems.length * tagStripH;
+    var baseUnit = totalWeight ? availableForWeighted / totalWeight : 0;
+    // Sanity guard: only apply this custom split if it leaves every row a sane, positive
+    // height — if the math comes out degenerate (e.g. an unusually short viewport), leave the
+    // default equal flex:1 1 0 in place rather than risk shrinking a row to near-nothing.
+    if (baseUnit * Math.min(COMP_ROW_WEIGHT, REC_ROW_WEIGHT) > 24) {
+      rowItems.forEach(function (it) {
+        var weight = it.sq.category === "Comp" ? COMP_ROW_WEIGHT : REC_ROW_WEIGHT;
+        var totalPx = weight * baseUnit + (it.tagRow ? tagStripH : 0);
+        it.rowEl.style.flex = "1 1 " + totalPx + "px";
+      });
+    }
+
     rowItems.forEach(function (item) {
       // Every block sits at its own real start/end time, exactly matching the ruler above —
       // no widening, no pushing a short session's neighbors later. A session genuinely only 15
@@ -645,7 +694,14 @@
         block.style.background = resolvedBg;
         var fg = blockTextColor(resolvedBg);
         block.style.color = fg;
-        var html = '<span class="label">' + s.label + "</span>";
+        // Comp blocks' first line (the apparatus name — "Warm Up", "Bars", "Vault"...) is
+        // dropped so the block only needs to fit its location + time, not three lines — Deepa
+        // asked (2026-11-19) for that freed-up room to go toward bigger Rec rows below (see the
+        // row-height weighting above, before this loop). "Break" is kept as-is: it has no location
+        // text of its own, so dropping its only line would leave the block showing nothing but
+        // a bare time range. Rec blocks are untouched — they keep all three lines, same as ever.
+        var dropLabel = item.sq.category === "Comp" && s.location && !/^break$/i.test(s.label);
+        var html = dropLabel ? "" : '<span class="label">' + s.label + "</span>";
         if (s.location) html += '<span class="loc">' + s.location + "</span>";
         html += '<span class="time">' + formatMinutes(s.start) + " - " + formatMinutes(s.end) + "</span>";
         block.innerHTML = html;
@@ -677,43 +733,6 @@
         }
       }
     });
-
-    // Every squadRow shares equal height via flex:1 1 0 by default, so a row that grew a
-    // classTagRow strip above its track has that much LESS room left for the track itself —
-    // its blocks end up visibly shorter than every other row's, which is exactly what made
-    // some blocks' text (even the time, in one case) clip off entirely once this feature
-    // shipped. Fix: measure the actual rendered strip height, then re-solve each row's total
-    // height so every row's TRACK portion ends up the same — the handful of rows with a strip
-    // "pay" for it with a few extra px pulled evenly from every row's share, not from their
-    // own track alone. Done as a post-layout pass (not pre-computed) so it stays correct
-    // against the real clamp()-based, viewport-dependent sizes rather than an assumed px value.
-    var taggedItems = rowItems.filter(function (it) { return !!it.tagRow; });
-    if (taggedItems.length) {
-      var rowsRect = rowsEl.getBoundingClientRect();
-      var gapPx = parseFloat(getComputedStyle(rowsEl).rowGap) || 0;
-      var dividerEls = rowsEl.querySelectorAll(".groupDivider");
-      var dividerPx = 0;
-      dividerEls.forEach(function (d) {
-        var cs = getComputedStyle(d);
-        dividerPx += d.getBoundingClientRect().height + parseFloat(cs.marginTop || 0) + parseFloat(cs.marginBottom || 0);
-      });
-      var totalChildren = rowItems.length + dividerEls.length;
-      var gapsTotal = gapPx * Math.max(totalChildren - 1, 0);
-      var sampleTagRow = taggedItems[0].tagRow;
-      var sampleCs = getComputedStyle(sampleTagRow);
-      var tagStripH = sampleTagRow.getBoundingClientRect().height + parseFloat(sampleCs.marginTop || 0) + parseFloat(sampleCs.marginBottom || 0);
-      var availableForTracks = rowsRect.height - gapsTotal - dividerPx - taggedItems.length * tagStripH;
-      var trackH = availableForTracks / rowItems.length;
-      // Sanity guard: only apply if this leaves a sane, positive track height — if the math
-      // comes out degenerate (e.g. an unusually short viewport), just leave the default equal
-      // flex:1 1 0 in place rather than risk shrinking every row to near-nothing.
-      if (trackH > 24) {
-        rowItems.forEach(function (it) {
-          var totalPx = trackH + (it.tagRow ? tagStripH : 0);
-          it.rowEl.style.flex = "1 1 " + totalPx + "px";
-        });
-      }
-    }
   }
 
   // A single failed fetch (a one-off network blip, or a transient hiccup in however the
@@ -752,7 +771,11 @@
     var realClockText = clockEl.textContent;
     clockEl.textContent = "12:59:59 PM";
 
-    var min = 40, max = 220;
+    // Deepa asked (2026-11-19) to size the clock down a notch from whatever this fit would
+    // otherwise max out at, to free up vertical room in #topBar for the schedule grid below —
+    // the cap was 220 before; a smaller cap here directly shrinks #topBar's height too, since
+    // it's flex:0 0 auto (sized to its content, not a fixed height).
+    var min = 40, max = 150;
     for (var i = 0; i < 11; i++) {
       var mid = (min + max) / 2;
       dayEl.style.fontSize = mid + "px";
